@@ -1943,3 +1943,28 @@ class TupleComparable:
 
     def __lt__(self, other):
         return self.obj < other.obj
+
+
+@toolz.memoize
+def is_amd_gpu_available():
+    """Utility method to check if AMD GPU is available"""
+    import subprocess
+    import re
+
+    check_cmd ="rocminfo"
+    try:
+        ps1 = subprocess.run(check_cmd.split(),  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT, check=True)
+        for line in str.splitlines(ps1.stdout.decode('utf-8')):
+            if re.search(r'gfx906', line):   # MI50/MI60
+                return True
+            elif re.search(r'gfx908', line): # MI100
+                return True
+            elif re.search(r'gfx90a', line): # MI200
+                return True
+        return False
+    except (FileNotFoundError, subprocess.CalledProcessError) as err:
+        return False
+
+
+DASK_USE_ROCM = is_amd_gpu_available()

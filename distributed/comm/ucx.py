@@ -28,11 +28,19 @@ from distributed.comm.utils import (
     host_array,
     to_frames,
 )
-from distributed.diagnostics.nvml import (
-    CudaDeviceInfo,
-    get_device_index_and_uuid,
-    has_cuda_context,
-)
+from distributed.utils import DASK_USE_ROCM
+if DASK_USE_ROCM:
+    from distributed.diagnostics.rocml import (
+        RocmDeviceInfo,
+        get_device_index_and_uuid,
+        has_rocm_context,
+    )
+else:
+    from distributed.diagnostics.nvml import (
+        CudaDeviceInfo,
+        get_device_index_and_uuid,
+        has_cuda_context,
+    )
 from distributed.utils import ensure_ip, get_ip, get_ipv6, log_errors, nbytes
 
 logger = logging.getLogger(__name__)
@@ -61,37 +69,67 @@ _warning_suffix = (
 )
 
 
-def _get_device_and_uuid_str(device_info: CudaDeviceInfo) -> str:
-    return f"{device_info.device_index} ({str(device_info.uuid)})"
+if DASK_USE_ROCM:
+    def _get_device_and_uuid_str(device_info: RocmDeviceInfo) -> str:
+        return f"{device_info.device_index} ({str(device_info.uuid)})"
+
+    def _warn_existing_cuda_context(device_info: RocmDeviceInfo, pid: int) -> None:
+        device_uuid_str = _get_device_and_uuid_str(device_info)
+        logger.warning(
+            f"A HIP context for device {device_uuid_str} already exists "
+            f"on process ID {pid}. {_warning_suffix}"
+        )
+
+    def _warn_cuda_context_wrong_device(
+        device_info_expected: RocmDeviceInfo, device_info_actual: RocmDeviceInfo, pid: int
+    ) -> None:
+        expected_device_uuid_str = _get_device_and_uuid_str(device_info_expected)
+        actual_device_uuid_str = _get_device_and_uuid_str(device_info_actual)
+        logger.warning(
+            f"Worker with process ID {pid} should have a HIP context assigned to device "
+            f"{expected_device_uuid_str}, but instead the HIP context is on device "
+            f"{actual_device_uuid_str}. {_warning_suffix}"
+        )
+else:
+    def _get_device_and_uuid_str(device_info: CudaDeviceInfo) -> str:
+        return f"{device_info.device_index} ({str(device_info.uuid)})"
+
+    def _warn_existing_cuda_context(device_info: CudaDeviceInfo, pid: int) -> None:
+        device_uuid_str = _get_device_and_uuid_str(device_info)
+        logger.warning(
+            f"A CUDA context for device {device_uuid_str} already exists "
+            f"on process ID {pid}. {_warning_suffix}"
+        )
+
+    def _warn_cuda_context_wrong_device(
+        device_info_expected: CudaDeviceInfo, device_info_actual: CudaDeviceInfo, pid: int
+    ) -> None:
+        expected_device_uuid_str = _get_device_and_uuid_str(device_info_expected)
+        actual_device_uuid_str = _get_device_and_uuid_str(device_info_actual)
+        logger.warning(
+            f"Worker with process ID {pid} should have a CUDA context assigned to device "
+            f"{expected_device_uuid_str}, but instead the CUDA context is on device "
+            f"{actual_device_uuid_str}. {_warning_suffix}"
+        )
 
 
-def _warn_existing_cuda_context(device_info: CudaDeviceInfo, pid: int) -> None:
-    device_uuid_str = _get_device_and_uuid_str(device_info)
-    logger.warning(
-        f"A CUDA context for device {device_uuid_str} already exists "
-        f"on process ID {pid}. {_warning_suffix}"
-    )
-
-
-def _warn_cuda_context_wrong_device(
-    device_info_expected: CudaDeviceInfo, device_info_actual: CudaDeviceInfo, pid: int
-) -> None:
-    expected_device_uuid_str = _get_device_and_uuid_str(device_info_expected)
-    actual_device_uuid_str = _get_device_and_uuid_str(device_info_actual)
-    logger.warning(
-        f"Worker with process ID {pid} should have a CUDA context assigned to device "
-        f"{expected_device_uuid_str}, but instead the CUDA context is on device "
-        f"{actual_device_uuid_str}. {_warning_suffix}"
-    )
-
-
-def synchronize_stream(stream=0):
-    import numba.cuda
-
-    ctx = numba.cuda.current_context()
-    cu_stream = numba.cuda.driver.drvapi.cu_stream(stream)
-    stream = numba.cuda.driver.Stream(ctx, cu_stream, None)
-    stream.synchronize()
+if DASK_USE_ROCM:
+    def synchronize_stream(stream=0):
+        # import numba.cuda
+        # 
+        # ctx = numba.cuda.current_context()
+        # cu_stream = numba.cuda.driver.drvapi.cu_stream(stream)
+        # stream = numba.cuda.driver.Stream(ctx, cu_stream, None)
+        # stream.synchronize()
+        print('========== synchronize_stream()  commented out =========')
+else:
+    def synchronize_stream(stream=0):
+        import numba.cuda
+        
+        ctx = numba.cuda.current_context()
+        cu_stream = numba.cuda.driver.drvapi.cu_stream(stream)
+        stream = numba.cuda.driver.Stream(ctx, cu_stream, None)
+        stream.synchronize()
 
 
 def init_once():

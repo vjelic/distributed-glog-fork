@@ -6,12 +6,20 @@ from tlz import memoize
 from tornado import web
 from tornado.ioloop import IOLoop
 
-from distributed.dashboard.components.nvml import (
-    gpu_doc,
-    gpu_memory_doc,
-    gpu_utilization_doc,
-)
-from distributed.dashboard.components.rmm import rmm_memory_doc
+from distributed.utils import DASK_USE_ROCM
+if DASK_USE_ROCM:
+    from distributed.dashboard.components.rocml import (
+        gpu_doc,
+        gpu_memory_doc,
+        gpu_utilization_doc,
+        # gpu_monitor_doc,
+    )
+else:
+    from distributed.dashboard.components.nvml import (
+        gpu_doc,
+        gpu_memory_doc,
+        gpu_utilization_doc,
+    )
 from distributed.dashboard.components.scheduler import (
     AggregateAction,
     BandwidthTypes,
@@ -119,12 +127,16 @@ applications = {
     "/individual-gpu-memory": gpu_memory_doc,
     "/individual-gpu-utilization": gpu_utilization_doc,
     "/individual-rmm-memory": rmm_memory_doc,
+    # "/individual-gpu-monitor": gpu_monitor_doc,
 }
 
 
 @memoize
-def template_variables(scheduler):
-    from distributed.diagnostics.nvml import device_get_count
+def template_variables():
+    if DASK_USE_ROCM:
+        from distributed.diagnostics.rocml import device_get_count
+    else:
+        from distributed.diagnostics.nvml import device_get_count
 
     template_variables = {
         "pages": [
@@ -132,7 +144,7 @@ def template_variables(scheduler):
             "workers",
             "tasks",
             "system",
-            *(["gpu"] if device_get_count() > 0 else []),
+            "gpu",
             "profile",
             "graph",
             "groups",

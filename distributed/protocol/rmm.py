@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import numba
-import numba.cuda
+from distributed.utils import DASK_USE_ROCM
+if not DASK_USE_ROCM:
+    import numba
+    import numba.cuda
 import numpy
 import rmm
 

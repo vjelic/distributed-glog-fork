@@ -78,10 +78,13 @@ from distributed.core import (
 )
 from distributed.core import rpc as RPCType
 from distributed.core import send_recv
-from distributed.diagnostics import nvml, rmm
-from distributed.diagnostics.plugin import WorkerPlugin, _get_plugin_name
-from distributed.diskutils import WorkSpace
-from distributed.exceptions import Reschedule
+from distributed.utils import DASK_USE_ROCM
+if DASK_USE_ROCM:
+    from distributed.diagnostics import rocml
+else:
+    from distributed.diagnostics import nvml
+from distributed.diagnostics.plugin import _get_plugin_name
+from distributed.diskutils import WorkDir, WorkSpace
 from distributed.http import get_handlers
 from distributed.metrics import context_meter, thread_time, time
 from distributed.node import ServerNode
@@ -635,7 +638,8 @@ class Worker(BaseWorker, ServerNode):
             "offload": utils._offload_executor,
             "actor": ThreadPoolExecutor(1, thread_name_prefix="Dask-Actor-Threads"),
         }
-        if nvml.device_get_count() > 0:
+        if (DASK_USE_ROCM and rocml.device_get_count() > 0) or \
+            (not DASK_USE_ROCM and nvml.device_get_count() > 0):
             self.executors["gpu"] = ThreadPoolExecutor(
                 1, thread_name_prefix="Dask-GPU-Threads"
             )
@@ -1359,7 +1363,8 @@ class Worker(BaseWorker, ServerNode):
             count=self.monitor.count,
             last_time=self.monitor.last_time,
         )
-        if nvml.device_get_count() > 0:
+        if (DASK_USE_ROCM and rocml.device_get_count() > 0) or \
+            (not DASK_USE_ROCM and nvml.device_get_count() > 0):
             result["gpu_name"] = self.monitor.gpu_name
             result["gpu_memory_total"] = self.monitor.gpu_memory_total
         return result
@@ -3196,15 +3201,25 @@ _global_workers = Worker._instances
 
 
 def add_gpu_metrics():
-    async def gpu_metric(worker):
-        result = await offload(nvml.real_time)
-        return result
+    if DASK_USE_ROCM:
+
+        async def gpu_metric(worker):
+
+            result = await offload(rocml.real_time)
+            return result
+
+        def gpu_startup(worker):
+            return rocml.one_time()
+
+    else:
+        async def gpu_metric(worker):
+            result = await offload(nvml.real_time)
+            return result
+        
+        def gpu_startup(worker):
+            return nvml.one_time()
 
     DEFAULT_METRICS["gpu"] = gpu_metric
-
-    def gpu_startup(worker):
-        return nvml.one_time()
-
     DEFAULT_STARTUP_INFORMATION["gpu"] = gpu_startup
 
 

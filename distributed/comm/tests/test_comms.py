@@ -571,7 +571,7 @@ async def check_client_server(
 
     listener.stop()
 
-
+# '''
 @pytest.mark.gpu
 @gen_test()
 async def test_ucx_client_server(ucx_loop):
@@ -580,7 +580,7 @@ async def test_ucx_client_server(ucx_loop):
 
     addr = ucp.get_address()
     await check_client_server("ucx://" + addr)
-
+# '''
 
 def tcp_eq(expected_host, expected_port=None):
     def checker(loc):

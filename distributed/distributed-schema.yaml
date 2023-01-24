@@ -1001,6 +1001,12 @@ properties:
               not a problem and will be automatically disabled if no GPUs are found in the
               system, but in certain cases it may be desirable to completely disable NVML
               diagnostics.
+          rocml:
+            type: boolean
+            description: |
+              If ``True``, enables GPU diagnostics with AMD-SMI. Generally leaving it enabled is
+              not a problem and will be automatically disabled if no AMD GPUs are found in the
+              system.
           computations:
             type: object
             properties:

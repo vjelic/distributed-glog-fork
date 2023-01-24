@@ -11,7 +11,11 @@ from dask.typing import NoDefault, no_default
 from dask.utils import parse_timedelta
 
 from distributed.compatibility import WINDOWS
-from distributed.diagnostics import nvml
+from distributed.utils import DASK_USE_ROCM
+if DASK_USE_ROCM:
+    from distributed.diagnostics import rocml
+else:
+    from distributed.diagnostics import nvml
 from distributed.metrics import monotonic, time
 
 
@@ -126,7 +130,13 @@ class SystemMonitor:
         if not WINDOWS:
             self.quantities["num_fds"] = deque(maxlen=maxlen)
 
-        if nvml.device_get_count() > 0:
+        if DASK_USE_ROCM and rocml.device_get_count() > 0:
+            gpu_extra = rocml.one_time()
+            self.gpu_name = gpu_extra["name"]
+            self.gpu_memory_total = gpu_extra["memory-total"]
+            self.quantities["gpu_utilization"] = deque(maxlen=maxlen)
+            self.quantities["gpu_memory_used"] = deque(maxlen=maxlen)
+        elif not DASK_USE_ROCM and nvml.device_get_count() > 0:
             gpu_extra = nvml.one_time()
             self.gpu_name = gpu_extra["name"]
             self.gpu_memory_total = gpu_extra["memory-total"]
@@ -207,7 +217,10 @@ class SystemMonitor:
             result["num_fds"] = self.proc.num_fds()
 
         if self.gpu_name:
-            gpu_metrics = nvml.real_time()
+            if DASK_USE_ROCM:
+                gpu_metrics = rocml.real_time()
+            else:
+                gpu_metrics = nvml.real_time()
             result["gpu_utilization"] = gpu_metrics["utilization"]
             result["gpu_memory_used"] = gpu_metrics["memory-used"]
 

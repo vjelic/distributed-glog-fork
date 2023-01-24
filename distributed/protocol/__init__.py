@@ -5,6 +5,9 @@ from functools import partial
 
 from distributed.protocol.core import decompress, dumps, loads, maybe_compress, msgpack
 from distributed.protocol.cuda import cuda_deserialize, cuda_serialize
+from distributed.utils import DASK_USE_ROCM
+if DASK_USE_ROCM:
+    from distributed.protocol.hip import hip_deserialize, hip_serialize
 from distributed.protocol.serialize import (
     Serialize,
     Serialized,

@@ -267,6 +267,7 @@ distributed:
 
   diagnostics:
     nvml: True
+    rocml: True
     computations:
       max-history: 100
       nframes: 0
