@@ -148,7 +148,7 @@ class SystemMonitor:
 
         self.update()
 
-    def recent(self) -> dict[str, Any]:
+    def recent(self) -> dict[str, float]:
         return {k: v[-1] for k, v in self.quantities.items()}
 
     def get_process_memory(self) -> int:
@@ -237,7 +237,7 @@ class SystemMonitor:
             "N/A" if WINDOWS else self.quantities["num_fds"][-1],
         )
 
-    def range_query(self, start: int) -> dict[str, list]:
+    def range_query(self, start: int) -> dict[str, list[float | None]]:
         if start >= self.count:
             return {k: [] for k in self.quantities}
 

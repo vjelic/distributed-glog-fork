@@ -107,7 +107,6 @@ async def test_prometheus(c, s, a, b):
     expected_metrics = {
         "dask_scheduler_clients",
         "dask_scheduler_desired_workers",
-        "dask_scheduler_gil_contention",
         "dask_scheduler_workers",
         "dask_scheduler_last_time",
         "dask_scheduler_tasks",
@@ -120,6 +119,14 @@ async def test_prometheus(c, s, a, b):
         "dask_scheduler_tick_count",
         "dask_scheduler_tick_duration_maximum_seconds",
     }
+
+    try:
+        import gilknocker  # noqa: F401
+
+    except ImportError:
+        pass  # pragma: nocover
+    else:
+        expected_metrics.add("dask_scheduler_gil_contention")
 
     assert set(active_metrics.keys()) == expected_metrics
     assert active_metrics["dask_scheduler_clients"].samples[0].value == 1.0
@@ -306,18 +313,17 @@ async def test_prometheus_collect_worker_states(c, s, a, b):
     await ev.set()
 
 
-@gen_cluster(client=True, clean_kwargs={"threads": False})
-async def test_health(c, s, a, b):
-    http_client = AsyncHTTPClient()
+@gen_cluster(nthreads=[])
+async def test_health(s):
+    aiohttp = pytest.importorskip("aiohttp")
 
-    response = await http_client.fetch(
-        "http://localhost:%d/health" % s.http_server.port
-    )
-    assert response.code == 200
-    assert response.headers["Content-Type"] == "text/plain"
-
-    txt = response.body.decode("utf8")
-    assert txt == "ok"
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(f"http://localhost:{s.http_server.port}/health") as resp,
+    ):
+        assert resp.status == 200
+        assert resp.headers["Content-Type"] == "text/plain; charset=utf-8"
+        assert (await resp.text()) == "ok"
 
 
 @gen_cluster()
@@ -400,23 +406,22 @@ def test_api_disabled_by_default():
 
 
 @gen_cluster(
-    client=True,
-    clean_kwargs={"threads": False},
+    nthreads=[],
     config={
         "distributed.scheduler.http.routes": DEFAULT_ROUTES
         + ["distributed.http.scheduler.api"]
     },
 )
-async def test_api(c, s, a, b):
+async def test_api(s):
     aiohttp = pytest.importorskip("aiohttp")
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            "http://localhost:%d/api/v1" % s.http_server.port
-        ) as resp:
-            assert resp.status == 200
-            assert resp.headers["Content-Type"] == "text/plain"
-            assert (await resp.text()) == "API V1"
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(f"http://localhost:{s.http_server.port}/api/v1") as resp,
+    ):
+        assert resp.status == 200
+        assert resp.headers["Content-Type"] == "text/plain; charset=utf-8"
+        assert (await resp.text()) == "API V1"
 
 
 @gen_cluster(

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, cast
 from tlz import topk
 
 import dask
+from dask.typing import Key
 from dask.utils import parse_timedelta
 
 from distributed.compatibility import PeriodicCallback
@@ -109,12 +110,12 @@ class WorkStealing(SchedulerPlugin):
         self.scheduler.events["stealing"] = deque(maxlen=maxlen)
         self.count = 0
         self.in_flight = {}
-        self.in_flight_occupancy = defaultdict(lambda: 0)
-        self.in_flight_tasks = defaultdict(lambda: 0)
+        self.in_flight_occupancy = defaultdict(int)
+        self.in_flight_tasks = defaultdict(int)
         self._in_flight_event = asyncio.Event()
         self.metrics = {
-            "request_count_total": defaultdict(lambda: 0),
-            "request_cost_total": defaultdict(lambda: 0),
+            "request_count_total": defaultdict(int),
+            "request_cost_total": defaultdict(int),
         }
         self._request_counter = 0
         self.scheduler.stream_handlers["steal-response"] = self.move_task_confirm
@@ -173,7 +174,7 @@ class WorkStealing(SchedulerPlugin):
 
     def transition(
         self,
-        key: str,
+        key: Key,
         start: TaskStateState,
         finish: TaskStateState,
         *args: Any,

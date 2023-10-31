@@ -3847,9 +3847,9 @@ class Contention(DashboardComponent):
         self.data = dict(
             names=[
                 ("Scheduler", "Event Loop"),
-                ("Scheduler", "GIL Contention"),
+                ("Scheduler", "GIL"),
                 ("Workers", "Event Loop"),
-                ("Workers", "GIL Contention"),
+                ("Workers", "GIL"),
             ],
             values=[0, 0, 0, 0],
             text=["0s", "0%", "0s", "0%"],
@@ -3880,7 +3880,7 @@ class Contention(DashboardComponent):
             fill_color=factor_cmap(
                 field_name="names",
                 palette=["#b8e0ce", "#81aae4"],
-                factors=["Event Loop", "GIL Contention"],
+                factors=["Event Loop", "GIL"],
                 start=1,
                 end=2,
             ),
@@ -4457,9 +4457,10 @@ class Shuffling(DashboardComponent):
                 data["y"].append(i)
                 data["worker"].append(worker)
                 for prefix in ["comm", "disk"]:
+                    memory_limit = d[prefix]["memory_limit"] or 0
                     data[f"{prefix}_total"].append(d[prefix]["total"])
                     data[f"{prefix}_memory"].append(d[prefix]["memory"])
-                    data[f"{prefix}_memory_limit"].append(d[prefix]["memory_limit"])
+                    data[f"{prefix}_memory_limit"].append(memory_limit)
                     data[f"{prefix}_buckets"].append(d[prefix]["buckets"])
                     data[f"{prefix}_avg_duration"].append(
                         d[prefix]["diagnostics"].get("avg_duration", 0)
@@ -4471,7 +4472,7 @@ class Shuffling(DashboardComponent):
                     data[f"{prefix}_written"].append(d[prefix]["written"])
                     if self.scheduler.workers[worker].last_seen < now - 5:
                         data[f"{prefix}_color"].append("gray")
-                    elif d[prefix]["memory"] > d[prefix]["memory_limit"]:
+                    elif d[prefix]["memory"] > memory_limit:
                         data[f"{prefix}_color"].append("red")
                     else:
                         data[f"{prefix}_color"].append("blue")
@@ -4572,7 +4573,7 @@ def shuffling_doc(scheduler, extra, doc):
     shuffling = Shuffling(scheduler, width=400, height=400)
     workers_memory = WorkersMemory(scheduler, width=400, height=400)
     timeseries = SystemTimeseries(
-        scheduler, width=1600, height=200, follow_interval=3000
+        scheduler, width=1600, height=200, follow_interval=10000
     )
     event_loop = Contention(scheduler, width=200, height=400)
 
