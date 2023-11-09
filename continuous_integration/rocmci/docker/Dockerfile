@@ -119,7 +119,7 @@ RUN UCX_HOME=/opt/ucx pip install -e . --no-cache-dir
 
 # prepare test
 COPY ./run_dask_cluster_simple.py $WORKSPACE_DIR
-COPY ./run_simple_cluster.ipynb $WORKSPACE_DIR
+COPY ./*.ipynb $WORKSPACE_DIR
 # COPY ./run_dask_cluster_multinode.py $WORKSPACE_DIR
 WORKDIR $WORKSPACE_DIR
 
