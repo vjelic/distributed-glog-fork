@@ -167,7 +167,7 @@ def _rocml_handles():
             # ROCM_VISIBLE_DEVICES is not set, take first device
             gpu_idx = 0
         return device_get_handle_by_index(gpu_idx)
-    
+
 
 def _running_process_matches(handle):
     init_once()
@@ -193,7 +193,7 @@ def has_rocm_context():
             handle = index
             if _running_process_matches(handle):
                 return get_device_index_and_uuid(handle)
-    
+
     return RocmContext(has_context=False)
 
 
@@ -205,7 +205,7 @@ B6 = B1 * 6
 def get_device_index_and_uuid(device):
     """Get both device index and unique id (long) from device index or uid
        As for now, ROCm smi does not provide uuid, but unique id as long integer.
-    
+
     Parameters
     ----------
     device: int
@@ -222,7 +222,7 @@ def get_device_index_and_uuid(device):
 
     try:
         uuid = hip_binding.hipUUID_t()
-        err, = hip_binding.hipDeviceGetUuid(uuid, device_index)
+        err, uuid = hip_binding.hipDeviceGetUuid(device_index)
         fmt = f'GPU-{B4}-{B2}-{B2}-{B2}-{B6}'
         uuid_str = fmt % tuple(uuid.bytes[:16])
     except ValueError:
