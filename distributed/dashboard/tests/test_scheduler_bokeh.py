@@ -451,6 +451,27 @@ async def test_FinePerformanceMetrics_no_spans(c, s, a, b):
 
 
 @gen_cluster(client=True)
+async def test_FinePerformanceMetrics_shuffle(c, s, a, b):
+    da = pytest.importorskip("dask.array")
+
+    x = da.random.random((4, 4), chunks=(1, -1))
+    x = x.rechunk((-1, 1), method="p2p")
+    x = x.sum()
+    await c.compute(x)
+    await a.heartbeat()
+    await b.heartbeat()
+
+    cl = FinePerformanceMetrics(s)
+    cl.update()
+    # execute metrics from shuffle
+    assert "shuffle-barrier" in cl.visible_functions
+    assert "p2p-shard-partition-cpu" in cl.visible_activities
+    # shuffle metrics have been filtered out
+    assert "background-comms" not in cl.visible_functions
+    assert "p2p-partition-cpu" not in cl.visible_activities
+
+
+@gen_cluster(client=True)
 async def test_ClusterMemory(c, s, a, b):
     cl = ClusterMemory(s)
 
@@ -1301,6 +1322,14 @@ async def test_prefix_bokeh(s, a, b):
     assert bokeh_app.prefix == f"/{prefix}"
 
 
+@gen_cluster(scheduler_kwargs={"dashboard": True})
+async def test_bokeh_relative(s, a, b):
+    http_client = AsyncHTTPClient()
+    response = await http_client.fetch(f"http://localhost:{s.http_server.port}/status")
+    assert response.code == 200
+    assert '<script type="text/javascript" src="static/' in response.body.decode()
+
+
 @gen_cluster(client=True, scheduler_kwargs={"dashboard": True})
 async def test_shuffling(c, s, a, b):
     pytest.importorskip("pyarrow")
@@ -1313,7 +1342,8 @@ async def test_shuffling(c, s, a, b):
         dtypes={"x": float, "y": float},
         freq="10 s",
     )
-    df2 = dd.shuffle.shuffle(df, "x", shuffle="p2p").persist()
+    with dask.config.set({"dataframe.shuffle.method": "p2p"}):
+        df2 = dd.shuffle.shuffle(df, "x").persist()
     start = time()
     while not ss.source.data["comm_written"]:
         ss.update()

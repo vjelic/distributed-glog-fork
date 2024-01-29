@@ -95,7 +95,7 @@ from distributed.protocol.serialize import _is_dumpable
 from distributed.pubsub import PubSubWorkerExtension
 from distributed.security import Security
 from distributed.sizeof import safe_sizeof as sizeof
-from distributed.spans import SpansWorkerExtension
+from distributed.spans import CONTEXTS_WITH_SPAN_ID, SpansWorkerExtension
 from distributed.threadpoolexecutor import ThreadPoolExecutor
 from distributed.threadpoolexecutor import secede as tpe_secede
 from distributed.utils import (
@@ -417,7 +417,7 @@ class Worker(BaseWorker, ServerNode):
     transfer_outgoing_count_limit: int
     threads: dict[Key, int]  # {ts.key: thread ID}
     active_threads_lock: threading.Lock
-    active_threads: dict[int, str]  # {thread ID: ts.key}
+    active_threads: dict[int, Key]  # {thread ID: ts.key}
     active_keys: set[Key]
     profile_keys: defaultdict[str, dict[str, Any]]
     profile_keys_history: deque[tuple[float, dict[str, dict[str, Any]]]]
@@ -1046,9 +1046,10 @@ class Worker(BaseWorker, ServerNode):
             spans_ext.collect_digests()
 
         # Send metrics with squashed span_id
-        digests: defaultdict[Hashable, float] = defaultdict(float)
+        # Don't cast int metrics to float
+        digests: defaultdict[Hashable, float] = defaultdict(int)
         for k, v in self.digests_total_since_heartbeat.items():
-            if isinstance(k, tuple) and k[0] == "execute":
+            if isinstance(k, tuple) and k[0] in CONTEXTS_WITH_SPAN_ID:
                 k = k[:1] + k[2:]
             digests[k] += v
 
@@ -2521,7 +2522,7 @@ class Worker(BaseWorker, ServerNode):
             )
         return result
 
-    def get_call_stack(self, keys: Collection[str] | None = None) -> dict[str, Any]:
+    def get_call_stack(self, keys: Collection[Key] | None = None) -> dict[Key, Any]:
         with self.active_threads_lock:
             sys_frames = sys._current_frames()
             frames = {key: sys_frames[tid] for tid, key in self.active_threads.items()}
@@ -2613,7 +2614,7 @@ class Worker(BaseWorker, ServerNode):
 
         return self._client
 
-    def get_current_task(self) -> str:
+    def get_current_task(self) -> Key:
         """Get the key of the task we are currently running
 
         This only makes sense to run within a task
@@ -3225,7 +3226,7 @@ def add_gpu_metrics():
         async def gpu_metric(worker):
             result = await offload(nvml.real_time)
             return result
-        
+
         def gpu_startup(worker):
             return nvml.one_time()
 
@@ -3245,6 +3246,22 @@ else:
 
     DEFAULT_METRICS["rmm"] = rmm_metric
     del _rmm
+
+# avoid importing cuDF unless explicitly enabled
+if dask.config.get("distributed.diagnostics.cudf"):
+    try:
+        import cudf as _cudf  # noqa: F401
+    except Exception:
+        pass
+    else:
+        from distributed.diagnostics import cudf
+
+        async def cudf_metric(worker):
+            result = await offload(cudf.real_time)
+            return result
+
+        DEFAULT_METRICS["cudf"] = cudf_metric
+        del _cudf
 
 
 def print(

@@ -4,13 +4,17 @@ import contextlib
 import pathlib
 import shutil
 import threading
-from collections.abc import Generator
+from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager
-from typing import Any, Callable
+from typing import Any
 
+from toolz import concat
+
+from distributed.metrics import context_meter, thread_time
 from distributed.shuffle._buffer import ShardsBuffer
 from distributed.shuffle._limiter import ResourceLimiter
-from distributed.utils import Deadline, log_errors
+from distributed.shuffle._pickle import pickle_bytelist
+from distributed.utils import Deadline, empty_context, log_errors, nbytes
 
 
 class ReadWriteLock:
@@ -135,7 +139,8 @@ class DiskShardsBuffer(ShardsBuffer):
         self._read = read
         self._directory_lock = ReadWriteLock()
 
-    async def _process(self, id: str, shards: list[bytes]) -> None:
+    @log_errors
+    async def _process(self, id: str, shards: list[Any]) -> None:
         """Write one buffer to file
 
         This function was built to offload the disk IO, but since then we've
@@ -148,20 +153,34 @@ class DiskShardsBuffer(ShardsBuffer):
         future then we should consider simplifying this considerably and
         dropping the write into communicate above.
         """
+        frames: Iterable[bytes | bytearray | memoryview]
+        if isinstance(shards[0], bytes):
+            # Manually serialized dataframes
+            frames = shards
+            serialize_meter_ctx: Any = empty_context
+        else:
+            # Unserialized numpy arrays
+            # Note: no calls to pickle_bytelist will happen until we actually start
+            # writing to disk below.
+            frames = concat(pickle_bytelist(shard) for shard in shards)
+            serialize_meter_ctx = context_meter.meter("serialize", func=thread_time)
 
-        with log_errors():
+        with (
+            self._directory_lock.read(),
+            context_meter.meter("disk-write"),
+            serialize_meter_ctx,
+        ):
             # Consider boosting total_size a bit here to account for duplication
-            with self.time("write"):
-                # We only need shared (i.e., read) access to the directory to write
-                # to a file inside of it.
-                with self._directory_lock.read():
-                    if self._closed:
-                        raise RuntimeError("Already closed")
-                    with open(
-                        self.directory / str(id), mode="ab", buffering=100_000_000
-                    ) as f:
-                        for shard in shards:
-                            f.write(shard)
+            # We only need shared (i.e., read) access to the directory to write
+            # to a file inside of it.
+            if self._closed:
+                raise RuntimeError("Already closed")
+
+            with open(self.directory / str(id), mode="ab") as f:
+                f.writelines(frames)
+
+        context_meter.digest_metric("disk-write", 1, "count")
+        context_meter.digest_metric("disk-write", sum(map(nbytes, frames)), "bytes")
 
     def read(self, id: str) -> Any:
         """Read a complete file back into memory"""
@@ -170,11 +189,17 @@ class DiskShardsBuffer(ShardsBuffer):
             raise RuntimeError("Tried to read from file before done.")
 
         try:
-            with self.time("read"):
-                with self._directory_lock.read():
-                    if self._closed:
-                        raise RuntimeError("Already closed")
-                    data, size = self._read((self.directory / str(id)).resolve())
+            with self._directory_lock.read():
+                if self._closed:
+                    raise RuntimeError("Already closed")
+                fname = (self.directory / str(id)).resolve()
+                # Note: don't add `with context_meter.meter("p2p-disk-read"):` to
+                # measure seconds here, as it would shadow "p2p-get-output-cpu" and
+                # "p2p-get-output-noncpu". Also, for rechunk it would not measure
+                # the whole disk access, as _read returns memory-mapped buffers.
+                data, size = self._read(fname)
+                context_meter.digest_metric("p2p-disk-read", 1, "count")
+                context_meter.digest_metric("p2p-disk-read", size, "bytes")
         except FileNotFoundError:
             raise KeyError(id)
 

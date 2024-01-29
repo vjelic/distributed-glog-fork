@@ -22,7 +22,7 @@ import threading
 import warnings
 import weakref
 from collections import defaultdict
-from collections.abc import Callable, Collection, Generator, Iterator, Mapping
+from collections.abc import Callable, Collection, Generator, Hashable, Iterator, Mapping
 from contextlib import contextmanager, nullcontext, suppress
 from itertools import count
 from time import sleep
@@ -55,7 +55,7 @@ from distributed.core import (
 )
 from distributed.deploy import SpecCluster
 from distributed.diagnostics.plugin import WorkerPlugin
-from distributed.metrics import time
+from distributed.metrics import context_meter, time
 from distributed.nanny import Nanny
 from distributed.node import ServerNode
 from distributed.proctitle import enable_proctitle_on_children
@@ -1465,6 +1465,20 @@ def captured_handler(handler):
 
 
 @contextmanager
+def captured_context_meter() -> Generator[defaultdict[tuple, float], None, None]:
+    """Capture distributed.metrics.context_meter metrics into a local defaultdict"""
+    # Don't cast int metrics to float
+    metrics: defaultdict[tuple, float] = defaultdict(int)
+
+    def cb(label: Hashable, value: float, unit: str) -> None:
+        label = label + (unit,) if isinstance(label, tuple) else (label, unit)
+        metrics[label] += value
+
+    with context_meter.add_callback(cb):
+        yield metrics
+
+
+@contextmanager
 def new_config(new_config):
     """
     Temporarily change configuration dictionary.
@@ -1486,7 +1500,7 @@ def new_config(new_config):
 
 
 @contextmanager
-def new_config_file(c):
+def new_config_file(c: dict[str, Any]) -> Iterator[None]:
     """
     Temporarily change configuration file to match dictionary *c*.
     """
@@ -1494,18 +1508,16 @@ def new_config_file(c):
 
     old_file = os.environ.get("DASK_CONFIG")
     fd, path = tempfile.mkstemp(prefix="dask-config")
+    with os.fdopen(fd, "w") as f:
+        yaml.dump(c, f)
+    os.environ["DASK_CONFIG"] = path
     try:
-        with os.fdopen(fd, "w") as f:
-            f.write(yaml.dump(c))
-        os.environ["DASK_CONFIG"] = path
-        try:
-            yield
-        finally:
-            if old_file:
-                os.environ["DASK_CONFIG"] = old_file
-            else:
-                del os.environ["DASK_CONFIG"]
+        yield
     finally:
+        if old_file:
+            os.environ["DASK_CONFIG"] = old_file
+        else:
+            del os.environ["DASK_CONFIG"]
         os.remove(path)
 
 
@@ -1802,6 +1814,7 @@ def config_for_cluster_tests(**extra_config):
             "distributed.scheduler.validate": True,
             "distributed.worker.validate": True,
             "distributed.worker.profile.enabled": False,
+            "distributed.admin.system-monitor.gil.enabled": False,
         },
         **extra_config,
     ):

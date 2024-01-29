@@ -25,6 +25,9 @@ if TYPE_CHECKING:
     from distributed.scheduler import TaskGroup, TaskStateState
 
 
+CONTEXTS_WITH_SPAN_ID = ("execute", "p2p")
+
+
 @contextmanager
 def span(*tags: str) -> Iterator[str]:
     """Tag group of tasks to be part of a certain group, called a span.
@@ -140,7 +143,10 @@ class Span:
         self.children = []
         self.groups = set()
         self._code = {}
-        self._cumulative_worker_metrics = defaultdict(float)
+
+        # Don't cast int metrics to float
+        self._cumulative_worker_metrics = defaultdict(int)
+
         assert len(total_nthreads_history) > 0
         self._total_nthreads_history = total_nthreads_history
         self._total_nthreads_offset = len(total_nthreads_history) - 1
@@ -313,8 +319,10 @@ class Span:
 
         At the moment of writing, all keys are
         ``("execute", <task prefix>, <activity>, <unit>)``
-        but more may be added in the future with a different format; please test for
-        ``k[0] == "execute"``.
+        or
+        ``("p2p", <where>, <activity>, <unit>)``
+        but more may be added in the future with a different format; please test e.g.
+        for ``k[0] == "execute"``.
         """
         out = sum_mappings(
             child._cumulative_worker_metrics for child in self.traverse_spans()
@@ -490,6 +498,8 @@ class SpansSchedulerExtension:
         default_span = None
 
         for ts in tss:
+            if ts.annotations is None:
+                ts.annotations = dict()
             # You may have different tasks belonging to the same TaskGroup but to
             # different spans. If that happens, arbitrarily force everything onto the
             # span of the earliest encountered TaskGroup.
@@ -629,7 +639,7 @@ class SpansWorkerExtension:
         self.digests_total_since_heartbeat = {
             k: v
             for k, v in self.worker.digests_total_since_heartbeat.items()
-            if isinstance(k, tuple) and k[0] == "execute"
+            if isinstance(k, tuple) and k[0] in CONTEXTS_WITH_SPAN_ID
         }
 
     def heartbeat(self) -> dict[tuple[Hashable, ...], float]:

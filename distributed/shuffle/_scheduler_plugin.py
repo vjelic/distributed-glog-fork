@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import contextlib
+import itertools
 import logging
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
 from dask.typing import Key
@@ -21,6 +21,7 @@ from distributed.shuffle._core import (
     id_from_key,
 )
 from distributed.shuffle._worker_plugin import ShuffleWorkerPlugin
+from distributed.utils import log_errors
 
 if TYPE_CHECKING:
     from distributed.scheduler import (
@@ -49,6 +50,7 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
     heartbeats: defaultdict[ShuffleId, dict]
     _shuffles: defaultdict[ShuffleId, set[SchedulerShuffleState]]
     _archived_by_stimulus: defaultdict[str, set[SchedulerShuffleState]]
+    _shift_counter: itertools.count[int]
 
     def __init__(self, scheduler: Scheduler):
         self.scheduler = scheduler
@@ -65,11 +67,12 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         self.scheduler.add_plugin(self, name="shuffle")
         self._shuffles = defaultdict(set)
         self._archived_by_stimulus = defaultdict(set)
+        self._shift_counter = itertools.count()
 
     async def start(self, scheduler: Scheduler) -> None:
         worker_plugin = ShuffleWorkerPlugin()
         await self.scheduler.register_worker_plugin(
-            None, dumps(worker_plugin), name="shuffle"
+            None, dumps(worker_plugin), name="shuffle", idempotent=False
         )
 
     def shuffle_ids(self) -> set[ShuffleId]:
@@ -80,6 +83,10 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         if shuffle.run_id != run_id:
             raise ValueError(f"{run_id=} does not match {shuffle}")
         if not consistent:
+            logger.warning(
+                "Shuffle %s restarted due to data inconsistency during barrier",
+                shuffle.id,
+            )
             return self._restart_shuffle(
                 shuffle.id,
                 self.scheduler,
@@ -140,10 +147,20 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
             # that the shuffle works as intended and should fail instead.
             self._raise_if_barrier_unknown(spec.id)
             self._raise_if_task_not_processing(key)
-            state = spec.create_new_run(self)
+            worker_for = self._calculate_worker_for(spec)
+            self._ensure_output_tasks_are_non_rootish(spec)
+            state = spec.create_new_run(
+                worker_for=worker_for, span_id=self.scheduler.tasks[key].group.span_id
+            )
             self.active_shuffles[spec.id] = state
             self._shuffles[spec.id].add(state)
             state.participating_workers.add(worker)
+            logger.warning(
+                "Shuffle %s initialized by task %r executed on worker %s",
+                spec.id,
+                key,
+                worker,
+            )
             return ToPickle(state.run_spec)
 
     def _raise_if_barrier_unknown(self, id: ShuffleId) -> None:
@@ -162,13 +179,13 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         if task.state != "processing":
             raise RuntimeError(f"Expected {task} to be processing, is {task.state}.")
 
-    def _pin_output_workers(
-        self,
-        id: ShuffleId,
-        output_partitions: Iterable[Any],
-        pick: Callable[[Any, Sequence[str]], str],
-    ) -> dict[Any, str]:
+    def _calculate_worker_for(self, spec: ShuffleSpec) -> dict[Any, str]:
         """Pin the outputs of a P2P shuffle to specific workers.
+
+        The P2P implementation of a hash join combines the loading of shuffled output
+        partitions for the left and right side with the actual merge operation into a
+        single output task. As a consequence, we need to make sure that shuffles with
+        shared output tasks align on the output mapping.
 
         Parameters
         ----------
@@ -180,46 +197,109 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
             This function assumes that the barrier task and the output tasks share
             the same worker restrictions.
         """
-        mapping = {}
-        barrier = self.scheduler.tasks[barrier_key(id)]
+        existing: dict[Any, str] = {}
+        shuffle_id = spec.id
+        barrier = self.scheduler.tasks[barrier_key(shuffle_id)]
 
         if barrier.worker_restrictions:
             workers = list(barrier.worker_restrictions)
         else:
             workers = list(self.scheduler.workers)
 
-        for partition in output_partitions:
-            worker = pick(partition, workers)
-            mapping[partition] = worker
+        # Ensure homogeneous cluster utilization when there are multiple small,
+        # independent shuffles going on at the same time, e.g. due to partial rechunking
+        shift_by = next(self._shift_counter) % len(workers)
+        workers = workers[shift_by:] + workers[:shift_by]
 
-        for dt in barrier.dependents:
-            try:
-                partition = dt.annotations["shuffle"]
-            except KeyError:
-                continue
+        # Check if this shuffle shares output tasks with a different shuffle that has
+        # already been initialized and needs to be taken into account when
+        # mapping output partitions to workers.
+        # Naively, you could delete this whole paragraph and just call
+        # spec.pick_worker; it would return two identical sets of results on both calls
+        # of this method... until the set of available workers changes between the two
+        # calls, which would cause misaligned shuffle outputs and a deadlock.
+        seen = {barrier}
+        for dependent in barrier.dependents:
+            for possible_barrier in dependent.dependencies:
+                if possible_barrier in seen:
+                    continue
+                seen.add(possible_barrier)
+                if not (other_barrier_key := id_from_key(possible_barrier.key)):
+                    continue
+                if not (shuffle := self.active_shuffles.get(other_barrier_key)):
+                    continue
+                current_worker_for = shuffle.run_spec.worker_for
+                # This is a fail-safe for future three-ways merges. At the moment there
+                # should only ever be at most one other shuffle that shares output
+                # tasks, so existing will always be empty.
+                if existing:  # pragma: nocover
+                    for shared_key in existing.keys() & current_worker_for.keys():
+                        if existing[shared_key] != current_worker_for[shared_key]:
+                            raise RuntimeError(
+                                f"Failed to initialize shuffle {spec.id} because "
+                                "it cannot align output partition mappings between "
+                                f"existing shuffles {seen}. "
+                                f"Mismatch encountered for output partition {shared_key!r}: "
+                                f"{existing[shared_key]} != {current_worker_for[shared_key]}."
+                            )
+                existing.update(current_worker_for)
 
-            if dt.worker_restrictions:
-                worker = pick(partition, list(dt.worker_restrictions))
-                mapping[partition] = worker
-            else:
-                worker = mapping[partition]
+        worker_for = {}
+        for partition in spec.output_partitions:
+            if (worker := existing.get(partition, None)) is None:
+                worker = spec.pick_worker(partition, workers)
+            worker_for[partition] = worker
+        return worker_for
 
-            self._set_restriction(dt, worker)
+    def _ensure_output_tasks_are_non_rootish(self, spec: ShuffleSpec) -> None:
+        """Output tasks are created without worker restrictions and run once with the
+        only purpose of setting the worker restriction and then raising Reschedule, and
+        then running again properly on the correct worker. It would be non-trivial to
+        set the worker restriction before they're first run due to potential task
+        fusion.
 
-        return mapping
+        Most times, this lack of initial restrictions would cause output tasks to be
+        labelled as rootish on their first (very fast) run, which in turn would break
+        the design assumption that the worker-side queue of rootish tasks will last long
+        enough to cover the round-trip to the scheduler to receive more tasks, which in
+        turn would cause a measurable slowdown on the overall runtime of the shuffle
+        operation.
 
+        This method ensures that, given M output tasks and N workers, each worker-side
+        queue is pre-loaded with M/N output tasks which can be flushed very fast as
+        they all raise Reschedule() in quick succession.
+
+        See Also
+        --------
+        ShuffleRun._ensure_output_worker
+        """
+        barrier = self.scheduler.tasks[barrier_key(spec.id)]
+        for dependent in barrier.dependents:
+            dependent._rootish = False
+
+    @log_errors()
     def _set_restriction(self, ts: TaskState, worker: str) -> None:
-        if "shuffle_original_restrictions" in ts.annotations:
+        if ts.annotations and "shuffle_original_restrictions" in ts.annotations:
             # This may occur if multiple barriers share the same output task,
             # e.g. in a hash join.
             return
-        ts.annotations["shuffle_original_restrictions"] = ts.worker_restrictions.copy()
+        if ts.annotations is None:
+            ts.annotations = dict()
+        ts.annotations["shuffle_original_restrictions"] = (
+            ts.worker_restrictions.copy()
+            if ts.worker_restrictions is not None
+            else None
+        )
         self.scheduler.set_restrictions({ts.key: {worker}})
 
+    @log_errors()
     def _unset_restriction(self, ts: TaskState) -> None:
         # shuffle_original_restrictions is only set if the task was first scheduled
         # on the wrong worker
-        if "shuffle_original_restrictions" not in ts.annotations:
+        if (
+            ts.annotations is None
+            or "shuffle_original_restrictions" not in ts.annotations
+        ):
             return
         original_restrictions = ts.annotations.pop("shuffle_original_restrictions")
         self.scheduler.set_restrictions({ts.key: original_restrictions})
@@ -259,6 +339,7 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         recs = self._restart_recommendations(id)
         self.scheduler.transitions(recs, stimulus_id=stimulus_id)
         self.scheduler.stimulus_queue_slots_maybe_opened(stimulus_id=stimulus_id)
+        logger.warning("Shuffle %s restarted due to stimulus '%s", id, stimulus_id)
 
     def remove_worker(
         self, scheduler: Scheduler, worker: str, *, stimulus_id: str, **kwargs: Any
@@ -279,6 +360,12 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         for shuffle_id, shuffle in self.active_shuffles.copy().items():
             if worker not in shuffle.participating_workers:
                 continue
+            logger.debug(
+                "Worker %s removed during active shuffle %s due to stimulus '%s'",
+                worker,
+                shuffle_id,
+                stimulus_id,
+            )
             exception = RuntimeError(f"Worker {worker} left during active {shuffle}")
             self._fail_on_workers(shuffle, str(exception))
             self._clean_on_scheduler(shuffle_id, stimulus_id)
@@ -305,6 +392,14 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         if shuffle := self.active_shuffles.get(shuffle_id):
             self._fail_on_workers(shuffle, message=f"{shuffle} forgotten")
             self._clean_on_scheduler(shuffle_id, stimulus_id=stimulus_id)
+            logger.debug(
+                "Shuffle %s forgotten because task %r transitioned to %s due to "
+                "stimulus '%s'",
+                shuffle_id,
+                key,
+                finish,
+                stimulus_id,
+            )
 
         if finish == "forgotten":
             shuffles = self._shuffles.pop(shuffle_id, set())
@@ -329,9 +424,10 @@ class ShuffleSchedulerPlugin(SchedulerPlugin):
         }
         self.scheduler.send_all({}, worker_msgs)
 
-    def _clean_on_scheduler(self, id: ShuffleId, stimulus_id: str | None) -> None:
+    def _clean_on_scheduler(self, id: ShuffleId, stimulus_id: str) -> None:
         shuffle = self.active_shuffles.pop(id)
-        if not shuffle._archived_by and stimulus_id:
+        logger.warning("Shuffle %s deactivated due to stimulus '%s'", id, stimulus_id)
+        if not shuffle._archived_by:
             shuffle._archived_by = stimulus_id
             self._archived_by_stimulus[stimulus_id].add(shuffle)
 

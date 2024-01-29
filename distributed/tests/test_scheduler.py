@@ -155,8 +155,6 @@ async def test_decide_worker_with_restrictions(client, s, a, b, c):
     assert x.key in a.data or x.key in b.data
 
 
-# FIXME: Temporarily xfail-ing to unblock CI
-@pytest.mark.xfail(reason="https://github.com/dask/distributed/issues/8255")
 @pytest.mark.parametrize("ndeps", [0, 1, 4])
 @pytest.mark.parametrize(
     "nthreads",
@@ -277,6 +275,30 @@ def test_decide_worker_coschedule_order_neighbors(ndeps, nthreads):
         assert len(unexpected_transfers) <= 3, unexpected_transfers
 
     test_decide_worker_coschedule_order_neighbors_()
+
+
+@gen_cluster(
+    client=True,
+    nthreads=[],
+)
+async def test_override_is_rootish(c, s):
+    x = c.submit(lambda x: x + 1, 1, key="x")
+    await async_poll_for(lambda: "x" in s.tasks, timeout=5)
+    ts_x = s.tasks["x"]
+    assert ts_x._rootish is None
+    assert s.is_rootish(ts_x)
+
+    ts_x._rootish = False
+    assert not s.is_rootish(ts_x)
+
+    y = c.submit(lambda y: y + 1, 1, key="y", workers=["not-existing"])
+    await async_poll_for(lambda: "y" in s.tasks, timeout=5)
+    ts_y = s.tasks["y"]
+    assert ts_y._rootish is None
+    assert not s.is_rootish(ts_y)
+
+    ts_y._rootish = True
+    assert s.is_rootish(ts_y)
 
 
 @pytest.mark.skipif(
@@ -1580,6 +1602,38 @@ async def test_workers_to_close_grouped(c, s, *workers):
     assert set(s.workers_to_close(key=key)) == {workers[0].address, workers[1].address}
 
 
+@pytest.mark.parametrize("reverse", [True, False])
+@gen_cluster(client=True)
+async def test_workers_to_close_never_close_long_running(c, s, a, b, reverse):
+    if reverse:
+        a, b = b, a
+    wait_evt = Event()
+
+    def executing(evt):
+        evt.wait()
+
+    def long_running_secede(evt):
+        secede()
+        evt.wait()
+
+    assert a.address in s.workers_to_close()
+    assert b.address in s.workers_to_close()
+    long_fut = c.submit(long_running_secede, wait_evt, workers=[a.address])
+    wsA = s.workers[a.address]
+    while not wsA.long_running:
+        await asyncio.sleep(0.01)
+    assert s.workers_to_close() == [b.address]
+    futs = [c.submit(executing, wait_evt, workers=[b.address]) for _ in range(10)]
+    assert a.address not in s.workers_to_close(n=2)
+    while not b.state.tasks:
+        await asyncio.sleep(0.01)
+    assert s.workers_to_close() == []
+    assert s.workers_to_close(n=1) == [b.address]
+    assert s.workers_to_close(n=2) == [b.address]
+
+    await wait_evt.set()
+
+
 @gen_cluster(client=True)
 async def test_retire_workers_no_suspicious_tasks(c, s, a, b):
     future = c.submit(
@@ -1650,7 +1704,7 @@ async def test_file_descriptors(c, s):
 @gen_cluster(client=True)
 async def test_learn_occupancy(c, s, a, b):
     futures = c.map(slowinc, range(1000), delay=0.2)
-    while sum(len(ts.who_has) for ts in s.tasks.values()) < 10:
+    while sum(len(ts.who_has or ()) for ts in s.tasks.values()) < 10:
         await asyncio.sleep(0.01)
 
     nproc = sum(ts.state == "processing" for ts in s.tasks.values())
@@ -1799,13 +1853,11 @@ async def test_run_on_scheduler(c, s, a, b):
     assert response == s.address
 
 
-@gen_cluster(client=True, config={"distributed.scheduler.pickle": False})
-async def test_run_on_scheduler_disabled(c, s, a, b):
-    def f(dask_scheduler=None):
-        return dask_scheduler.address
-
-    with pytest.raises(ValueError, match="disallowed from deserializing"):
-        await c._run_on_scheduler(f)
+@gen_test()
+async def test_allow_pickle_false():
+    with dask.config.set({"distributed.scheduler.pickle": False}):
+        with pytest.raises(RuntimeError, match="Pickling can no longer be disabled"):
+            await Scheduler()
 
 
 @gen_cluster()
@@ -2248,32 +2300,36 @@ async def test_closing_scheduler_closes_workers(s, a, b):
         assert time() < start + 2
 
 
-@gen_cluster(
-    client=True, nthreads=[("127.0.0.1", 1)], worker_kwargs={"resources": {"A": 1}}
-)
-async def test_resources_reset_after_cancelled_task(c, s, w):
+@gen_cluster(client=True, nthreads=[("", 1)], worker_kwargs={"resources": {"A": 1}})
+async def test_resources_reset_after_cancelled_task(c, s, a):
     lock = Lock()
+    await lock.acquire()
 
     def block(lock):
         with lock:
             return
 
-    await lock.acquire()
-    future = c.submit(block, lock, resources={"A": 1})
+    assert s.workers[a.address].used_resources == {"A": 0}
+    assert a.state.available_resources == {"A": 1}
 
-    while not w.state.executing_count:
-        await asyncio.sleep(0.01)
+    future = c.submit(block, lock, key="x", resources={"A": 1})
+    await wait_for_state("x", "executing", a)
+    assert s.workers[a.address].used_resources == {"A": 1}
+    assert a.state.available_resources == {"A": 0}
 
     await future.cancel()
+    await wait_for_state("x", "cancelled", a)
+    assert s.workers[a.address].used_resources == {"A": 0}
+    assert a.state.available_resources == {"A": 0}
+
     await lock.release()
+    await async_poll_for(lambda: not a.state.tasks, timeout=5)
+    assert s.workers[a.address].used_resources == {"A": 0}
+    assert a.state.available_resources == {"A": 1}
 
-    while w.state.executing_count:
-        await asyncio.sleep(0.01)
-
-    assert not s.workers[w.address].used_resources["A"]
-    assert w.state.available_resources == {"A": 1}
-
-    await c.submit(inc, 1, resources={"A": 1})
+    assert await c.submit(inc, 1, resources={"A": 1}) == 2
+    assert s.workers[a.address].used_resources == {"A": 0}
+    assert a.state.available_resources == {"A": 1}
 
 
 @gen_cluster(client=True)
@@ -2349,11 +2405,11 @@ async def test_idle_timeout(c, s, a, b):
     pc.stop()
 
 
-@gen_cluster(
-    client=True,
-    nthreads=[],
-)
+@gen_cluster(client=True, nthreads=[])
 async def test_idle_timeout_no_workers(c, s):
+    """Test that idle-timeout is not triggered if there are no workers available
+    but there are tasks queued
+    """
     # Cancel the idle check periodic timeout so we can step through manually
     s.periodic_callbacks["idle-timeout"].stop()
 
@@ -2382,6 +2438,108 @@ async def test_idle_timeout_no_workers(c, s):
     assert not s.check_idle()
 
     assert s.check_idle()
+
+
+@gen_cluster(
+    client=True,
+    nthreads=[],
+    config={"distributed.scheduler.no-workers-timeout": None},
+)
+async def test_no_workers_timeout_disabled(c, s, a, b):
+    """no-workers-timeout has been disabled"""
+    future = c.submit(inc, 1, key="x")
+    await wait_for_state("x", ("queued", "no-worker"), s)
+
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+
+    assert s.status == Status.running
+
+
+@pytest.mark.slow
+@gen_cluster(
+    client=True,
+    nthreads=[],
+    config={"distributed.scheduler.no-workers-timeout": "100ms"},
+)
+async def test_no_workers_timeout_without_workers(c, s):
+    """Trip no-workers-timeout when there are no workers available"""
+    # Don't trip scheduler shutdown when there are no tasks
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+
+    assert s.status == Status.running
+
+    future = c.submit(inc, 1)
+    while s.status != Status.closed:
+        await asyncio.sleep(0.01)
+
+
+@pytest.mark.slow
+@gen_cluster(
+    client=True,
+    config={"distributed.scheduler.no-workers-timeout": "100ms"},
+)
+async def test_no_workers_timeout_bad_restrictions(c, s, a, b):
+    """Trip no-workers-timeout when there are workers available but none satisfies
+    task restrictions
+    """
+    future = c.submit(inc, 1, key="x", workers=["127.0.0.2:1234"])
+    while s.status != Status.closed:
+        await asyncio.sleep(0.01)
+
+
+@gen_cluster(
+    client=True,
+    nthreads=[("", 1)],
+    config={"distributed.scheduler.no-workers-timeout": "100ms"},
+)
+async def test_no_workers_timeout_queued(c, s, a):
+    """Don't trip no-workers-timeout when there are queued tasks AND processing tasks"""
+    ev = Event()
+    futures = [c.submit(lambda ev: ev.wait(), ev, pure=False) for _ in range(3)]
+    while not a.state.tasks:
+        await asyncio.sleep(0.01)
+    assert s.queued or math.isinf(s.WORKER_SATURATION)
+
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+
+    assert s.status == Status.running
+    await ev.set()
+
+
+@pytest.mark.slow
+@gen_cluster(
+    client=True,
+    config={"distributed.scheduler.no-workers-timeout": "100ms"},
+)
+async def test_no_workers_timeout_processing(c, s, a, b):
+    """Don't trip no-workers-timeout when there are tasks processing"""
+    ev = Event()
+    x = c.submit(lambda ev: ev.wait(), ev, key="x")
+    y = c.submit(inc, 1, key="y", workers=["127.0.0.2:1234"])
+    await wait_for_state("x", "processing", s)
+    await wait_for_state("y", "no-worker", s)
+
+    # Scheduler won't shut down for as long as f1 is running
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+    s._check_no_workers()
+    await asyncio.sleep(0.2)
+    assert s.status == Status.running
+
+    await ev.set()
+    await x
+
+    while s.status != Status.closed:
+        await asyncio.sleep(0.01)
 
 
 @gen_cluster(client=True, config={"distributed.scheduler.bandwidth": "100 GB"})
@@ -2604,12 +2762,12 @@ async def test_default_task_duration_splits(c, s, a, b):
     # verify that we're looking for the correct key
     npart = 10
     df = dd.from_pandas(pd.DataFrame({"A": range(100), "B": 1}), npartitions=npart)
-    graph = df.shuffle(
-        "A",
-        shuffle="tasks",
-        # If we don't have enough partitions, we'll fall back to a simple shuffle
-        max_branch=npart - 1,
-    ).sum()
+    with dask.config.set({"dataframe.shuffle.method": "tasks"}):
+        graph = df.shuffle(
+            "A",
+            # If we don't have enough partitions, we'll fall back to a simple shuffle
+            max_branch=npart - 1,
+        ).sum()
     fut = c.compute(graph)
     await wait(fut)
 
@@ -4174,46 +4332,6 @@ async def test_dump_cluster_state(s, *workers, format):
     finally:
         fs = fsspec.filesystem("memory")
         fs.rm("state-dumps", recursive=True)
-
-
-@gen_cluster(nthreads=[])
-async def test_idempotent_plugins(s):
-    class IdempotentPlugin(SchedulerPlugin):
-        def __init__(self, instance=None):
-            self.name = "idempotentplugin"
-            self.instance = instance
-
-        def start(self, scheduler):
-            if self.instance != "first":
-                raise RuntimeError(
-                    "Only the first plugin should be started when idempotent is set"
-                )
-
-    first = IdempotentPlugin(instance="first")
-    await s.register_scheduler_plugin(plugin=dumps(first), idempotent=True)
-    assert "idempotentplugin" in s.plugins
-
-    second = IdempotentPlugin(instance="second")
-    await s.register_scheduler_plugin(plugin=dumps(second), idempotent=True)
-    assert "idempotentplugin" in s.plugins
-    assert s.plugins["idempotentplugin"].instance == "first"
-
-
-@gen_cluster(nthreads=[])
-async def test_non_idempotent_plugins(s):
-    class NonIdempotentPlugin(SchedulerPlugin):
-        def __init__(self, instance=None):
-            self.name = "nonidempotentplugin"
-            self.instance = instance
-
-    first = NonIdempotentPlugin(instance="first")
-    await s.register_scheduler_plugin(plugin=dumps(first), idempotent=False)
-    assert "nonidempotentplugin" in s.plugins
-
-    second = NonIdempotentPlugin(instance="second")
-    await s.register_scheduler_plugin(plugin=dumps(second), idempotent=False)
-    assert "nonidempotentplugin" in s.plugins
-    assert s.plugins["nonidempotentplugin"].instance == "second"
 
 
 @gen_cluster(nthreads=[("", 1)])

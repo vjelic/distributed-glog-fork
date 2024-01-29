@@ -507,7 +507,7 @@ class Future(WrappedKey):
         except AttributeError:
             # Occasionally we see this error when shutting down the client
             # https://github.com/dask/distributed/issues/4305
-            if not sys.is_finalizing():
+            if not is_python_shutting_down():
                 raise
         except RuntimeError:  # closed event loop
             pass
@@ -1454,10 +1454,10 @@ class Client(SyncMethodMixin):
                 f"`n_workers` must be a positive integer. Instead got {n_workers}."
             )
 
-        if self.cluster is None:
-            return self.sync(self._wait_for_workers, n_workers, timeout=timeout)
+        if self.cluster and hasattr(self.cluster, "wait_for_workers"):
+            return self.cluster.wait_for_workers(n_workers, timeout)
 
-        return self.cluster.wait_for_workers(n_workers, timeout)
+        return self.sync(self._wait_for_workers, n_workers, timeout=timeout)
 
     def _heartbeat(self):
         # Don't send heartbeat if scheduler comm or cluster are already closed
@@ -1667,6 +1667,7 @@ class Client(SyncMethodMixin):
             with suppress(TimeoutError, asyncio.CancelledError):
                 await wait_for(handle_report_task, 0 if fast else 2)
 
+    @log_errors
     async def _close(self, fast=False):
         """
         Send close signal and wait until scheduler completes
@@ -1688,51 +1689,49 @@ class Client(SyncMethodMixin):
             for pc in self._periodic_callbacks.values():
                 pc.stop()
 
-        with log_errors():
-            _del_global_client(self)
-            self._scheduler_identity = {}
-            if self._set_as_default and not _get_global_client():
-                with suppress(AttributeError):
-                    # clear the dask.config set keys
-                    with self._set_config:
-                        pass
-            if self.get == dask.config.get("get", None):
-                del dask.config.config["get"]
+        _del_global_client(self)
+        self._scheduler_identity = {}
+        if self._set_as_default and not _get_global_client():
+            with suppress(AttributeError):
+                # clear the dask.config set keys
+                with self._set_config:
+                    pass
+        if self.get == dask.config.get("get", None):
+            del dask.config.config["get"]
 
+        if (
+            self.scheduler_comm
+            and self.scheduler_comm.comm
+            and not self.scheduler_comm.comm.closed()
+        ):
+            self._send_to_scheduler({"op": "close-client"})
+            self._send_to_scheduler({"op": "close-stream"})
+        async with self._wait_for_handle_report_task(fast=fast):
             if (
                 self.scheduler_comm
                 and self.scheduler_comm.comm
                 and not self.scheduler_comm.comm.closed()
             ):
-                self._send_to_scheduler({"op": "close-client"})
-                self._send_to_scheduler({"op": "close-stream"})
-            async with self._wait_for_handle_report_task(fast=fast):
-                if (
-                    self.scheduler_comm
-                    and self.scheduler_comm.comm
-                    and not self.scheduler_comm.comm.closed()
-                ):
-                    await self.scheduler_comm.close()
+                await self.scheduler_comm.close()
 
-                for key in list(self.futures):
-                    self._release_key(key=key)
+            for key in list(self.futures):
+                self._release_key(key=key)
 
-                if self._start_arg is None:
-                    with suppress(AttributeError):
-                        await self.cluster.close()
+            if self._start_arg is None:
+                with suppress(AttributeError):
+                    await self.cluster.close()
 
-                await self.rpc.close()
+            await self.rpc.close()
 
-                self.status = "closed"
+            self.status = "closed"
 
-                if _get_global_client() is self:
-                    _set_global_client(None)
+            if _get_global_client() is self:
+                _set_global_client(None)
 
-            with suppress(AttributeError):
-                await self.scheduler.close_rpc()
+        with suppress(AttributeError):
+            await self.scheduler.close_rpc()
 
-            self.scheduler = None
-
+        self.scheduler = None
         self.status = "closed"
 
     def close(self, timeout=no_default):
@@ -1787,7 +1786,7 @@ class Client(SyncMethodMixin):
 
         assert self.status == "closed"
 
-        if not sys.is_finalizing():
+        if not is_python_shutting_down():
             self._loop_runner.stop()
 
     async def _shutdown(self):
@@ -2189,7 +2188,7 @@ class Client(SyncMethodMixin):
                 "Cannot gather Futures created by another client. "
                 f"These are the {len(mismatched_futures)} (out of {len(futures)}) "
                 f"mismatched Futures and their client IDs (this client is {self.id}): "
-                f"{ {f: f.client.id for f in mismatched_futures} }"
+                f"{ {f: f.client.id for f in mismatched_futures} }"  # noqa: E201, E202
             )
         keys = [future.key for future in future_set]
         bad_data = dict()
@@ -3791,6 +3790,14 @@ class Client(SyncMethodMixin):
         >>> client.upload_file('mylibrary.egg')  # doctest: +SKIP
         >>> from mylibrary import myfunc  # doctest: +SKIP
         >>> L = client.map(myfunc, seq)  # doctest: +SKIP
+        >>>
+        >>> # Where did that file go? Use `dask_worker.local_directory`.
+        >>> def where_is_mylibrary(dask_worker):
+        >>>     path = pathlib.Path(dask_worker.local_directory) / 'mylibrary.egg'
+        >>>     assert path.exists()
+        >>>     return str(path)
+        >>>
+        >>> client.run(where_is_mylibrary)  # doctest: +SKIP
         """
         name = filename + str(uuid.uuid4())
 
@@ -4834,7 +4841,7 @@ class Client(SyncMethodMixin):
         self,
         plugin: NannyPlugin | SchedulerPlugin | WorkerPlugin,
         name: str | None = None,
-        idempotent: bool = False,
+        idempotent: bool | None = None,
     ):
         """Register a plugin.
 
@@ -4849,11 +4856,21 @@ class Client(SyncMethodMixin):
             plugin instance or automatically generated if not present.
         idempotent :
             Do not re-register if a plugin of the given name already exists.
+            If None, ``plugin.idempotent`` is taken if defined, False otherwise.
         """
         if name is None:
             name = _get_plugin_name(plugin)
         assert name
-
+        if idempotent is not None:
+            warnings.warn(
+                "The `idempotent` argument is deprecated and will be removed in a "
+                "future version. Please mark your plugin as idempotent by setting its "
+                "`.idempotent` attribute to `True`.",
+                FutureWarning,
+            )
+        else:
+            idempotent = getattr(plugin, "idempotent", False)
+        assert isinstance(idempotent, bool)
         return self._register_plugin(plugin, name, idempotent)
 
     @singledispatchmethod

@@ -3,14 +3,22 @@ from __future__ import annotations
 import logging
 import os
 from collections import defaultdict
-from collections.abc import Callable, Collection, Iterable, Iterator, Sequence
+from collections.abc import (
+    Callable,
+    Collection,
+    Generator,
+    Hashable,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import toolz
+from tornado.ioloop import IOLoop
 
 import dask
 from dask.base import tokenize
@@ -20,12 +28,13 @@ from dask.typing import Key
 
 from distributed.core import PooledRPCCall
 from distributed.exceptions import Reschedule
+from distributed.metrics import context_meter
 from distributed.shuffle._arrow import (
+    buffers_to_table,
     check_dtype_support,
     check_minimal_arrow_version,
     convert_shards,
     deserialize_table,
-    list_of_buffers_to_table,
     read_from_disk,
     serialize_table,
 )
@@ -40,7 +49,6 @@ from distributed.shuffle._core import (
     handle_unpack_errors,
 )
 from distributed.shuffle._limiter import ResourceLimiter
-from distributed.shuffle._scheduler_plugin import ShuffleSchedulerPlugin
 from distributed.shuffle._worker_plugin import ShuffleWorkerPlugin
 from distributed.sizeof import sizeof
 
@@ -179,8 +187,6 @@ class P2PShuffleLayer(Layer):
         else:
             self.parts_out = set(range(self.npartitions))
         self.npartitions_input = npartitions_input
-        annotations = annotations or {}
-        annotations.update({"shuffle": lambda key: key[1]})
         super().__init__(annotations=annotations)
 
     def __repr__(self) -> str:
@@ -307,8 +313,6 @@ def split_by_worker(
 
     from dask.dataframe.dispatch import to_pyarrow_table_dispatch
 
-    df = df.astype(meta.dtypes, copy=False)
-
     # (cudf support) Avoid pd.Series
     constructor = df._constructor_sliced
     assert isinstance(constructor, type)
@@ -394,6 +398,8 @@ class DataFrameShuffleRun(ShuffleRun[int, "pd.DataFrame"]):
         A unique `ShuffleID` this belongs to.
     run_id:
         A unique identifier of the specific execution of the shuffle this belongs to.
+    span_id:
+        Span identifier; see :doc:`spans`
     local_address:
         The local address this Shuffle can be contacted by using `rpc`.
     directory:
@@ -403,8 +409,11 @@ class DataFrameShuffleRun(ShuffleRun[int, "pd.DataFrame"]):
     rpc:
         A callable returning a PooledRPCCall to contact other Shuffle instances.
         Typically a ConnectionPool.
+    digest_metric:
+        A callable to ingest a performance metric.
+        Typically Server.digest_metric.
     scheduler:
-        A PooledRPCCall to to contact the scheduler.
+        A PooledRPCCall to contact the scheduler.
     memory_limiter_disk:
     memory_limiter_comm:
         A ``ResourceLimiter`` limiting the total amount of memory used in either
@@ -423,28 +432,34 @@ class DataFrameShuffleRun(ShuffleRun[int, "pd.DataFrame"]):
         meta: pd.DataFrame,
         id: ShuffleId,
         run_id: int,
+        span_id: str | None,
         local_address: str,
         directory: str,
         executor: ThreadPoolExecutor,
         rpc: Callable[[str], PooledRPCCall],
+        digest_metric: Callable[[Hashable, float], None],
         scheduler: PooledRPCCall,
         memory_limiter_disk: ResourceLimiter,
         memory_limiter_comms: ResourceLimiter,
         disk: bool,
+        loop: IOLoop,
     ):
         import pandas as pd
 
         super().__init__(
             id=id,
             run_id=run_id,
+            span_id=span_id,
             local_address=local_address,
             directory=directory,
             executor=executor,
             rpc=rpc,
+            digest_metric=digest_metric,
             scheduler=scheduler,
             memory_limiter_comms=memory_limiter_comms,
             memory_limiter_disk=memory_limiter_disk,
             disk=disk,
+            loop=loop,
         )
         self.column = column
         self.meta = meta
@@ -454,16 +469,13 @@ class DataFrameShuffleRun(ShuffleRun[int, "pd.DataFrame"]):
         self.partitions_of = dict(partitions_of)
         self.worker_for = pd.Series(worker_for, name="_workers").astype("category")
 
-    async def receive(self, data: list[tuple[int, bytes]]) -> None:
-        await self._receive(data)
-
     async def _receive(self, data: list[tuple[int, bytes]]) -> None:
         self.raise_if_closed()
 
         filtered = []
         for d in data:
             if d[0] not in self.received:
-                filtered.append(d[1])
+                filtered.append(d)
                 self.received.add(d[0])
                 self.total_recvd += sizeof(d)
         del data
@@ -477,49 +489,46 @@ class DataFrameShuffleRun(ShuffleRun[int, "pd.DataFrame"]):
             self._exception = e
             raise
 
-    def _repartition_buffers(self, data: list[bytes]) -> dict[NDIndex, bytes]:
-        table = list_of_buffers_to_table(data)
+    def _repartition_buffers(
+        self, data: list[tuple[int, bytes]]
+    ) -> dict[NDIndex, bytes]:
+        table = buffers_to_table(data)
         groups = split_by_partition(table, self.column)
         assert len(table) == sum(map(len, groups.values()))
         del data
         return {(k,): serialize_table(v) for k, v in groups.items()}
 
-    async def _add_partition(
+    def _shard_partition(
         self,
         data: pd.DataFrame,
         partition_id: int,
         **kwargs: Any,
-    ) -> int:
-        def _() -> dict[str, tuple[int, bytes]]:
-            out = split_by_worker(
-                data,
-                self.column,
-                self.meta,
-                self.worker_for,
-            )
-            out = {k: (partition_id, serialize_table(t)) for k, t in out.items()}
-            return out
+    ) -> dict[str, tuple[int, bytes]]:
+        out = split_by_worker(
+            data,
+            self.column,
+            self.meta,
+            self.worker_for,
+        )
+        out = {k: (partition_id, serialize_table(t)) for k, t in out.items()}
 
-        out = await self.offload(_)
-        await self._write_to_comm(out)
-        return self.run_id
+        nbytes = sum(len(b) for _, b in out.values())
+        context_meter.digest_metric("p2p-shards", nbytes, "bytes")
+        context_meter.digest_metric("p2p-shards", len(out), "count")
 
-    async def _get_output_partition(
+        return out
+
+    def _get_output_partition(
         self,
         partition_id: int,
-        key: str,
+        key: Key,
         **kwargs: Any,
     ) -> pd.DataFrame:
         try:
-
-            def _(partition_id: int, meta: pd.DataFrame) -> pd.DataFrame:
-                data = self._read_from_disk((partition_id,))
-                return convert_shards(data, meta)
-
-            out = await self.offload(_, partition_id, self.meta)
+            data = self._read_from_disk((partition_id,))
+            return convert_shards(data, self.meta)
         except KeyError:
-            out = self.meta.copy()
-        return out
+            return self.meta.copy()
 
     def _get_assigned_worker(self, id: int) -> str:
         return self.worker_for[id]
@@ -527,7 +536,7 @@ class DataFrameShuffleRun(ShuffleRun[int, "pd.DataFrame"]):
     def read(self, path: Path) -> tuple[pa.Table, int]:
         return read_from_disk(path)
 
-    def deserialize(self, buffer: bytes) -> Any:
+    def deserialize(self, buffer: Any) -> Any:
         return deserialize_table(buffer)
 
 
@@ -538,12 +547,19 @@ class DataFrameShuffleSpec(ShuffleSpec[int]):
     meta: pd.DataFrame
     parts_out: set[int]
 
-    def _pin_output_workers(self, plugin: ShuffleSchedulerPlugin) -> dict[int, str]:
-        pick_worker = partial(_get_worker_for_range_sharding, self.npartitions)
-        return plugin._pin_output_workers(self.id, self.parts_out, pick_worker)
+    @property
+    def output_partitions(self) -> Generator[int, None, None]:
+        yield from self.parts_out
+
+    def pick_worker(self, partition: int, workers: Sequence[str]) -> str:
+        return _get_worker_for_range_sharding(self.npartitions, partition, workers)
 
     def create_run_on_worker(
-        self, run_id: int, worker_for: dict[int, str], plugin: ShuffleWorkerPlugin
+        self,
+        run_id: int,
+        span_id: str | None,
+        worker_for: dict[int, str],
+        plugin: ShuffleWorkerPlugin,
     ) -> ShuffleRun:
         return DataFrameShuffleRun(
             column=self.column,
@@ -551,6 +567,7 @@ class DataFrameShuffleSpec(ShuffleSpec[int]):
             worker_for=worker_for,
             id=self.id,
             run_id=run_id,
+            span_id=span_id,
             directory=os.path.join(
                 plugin.worker.local_directory,
                 f"shuffle-{self.id}-{run_id}",
@@ -558,12 +575,14 @@ class DataFrameShuffleSpec(ShuffleSpec[int]):
             executor=plugin._executor,
             local_address=plugin.worker.address,
             rpc=plugin.worker.rpc,
+            digest_metric=plugin.worker.digest_metric,
             scheduler=plugin.worker.scheduler,
             memory_limiter_disk=plugin.memory_limiter_disk
             if self.disk
             else ResourceLimiter(None),
             memory_limiter_comms=plugin.memory_limiter_comms,
             disk=self.disk,
+            loop=plugin.worker.loop,
         )
 
 

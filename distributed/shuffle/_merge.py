@@ -258,8 +258,6 @@ class HashJoinP2PLayer(Layer):
         self.left_index = left_index
         self.right_index = right_index
         self.disk = disk
-        annotations = annotations or {}
-        annotations.update({"shuffle": lambda key: key[-1]})
         super().__init__(annotations=annotations)
 
     def _cull_dependencies(
@@ -273,8 +271,8 @@ class HashJoinP2PLayer(Layer):
         """
         deps = {}
         parts_out = parts_out or self._keys_to_parts(keys)
-        keys = {(self.name_input_left, i) for i in range(self.npartitions)}
-        keys |= {(self.name_input_right, i) for i in range(self.npartitions)}
+        keys = {(self.name_input_left, i) for i in range(self.n_partitions_left)}
+        keys |= {(self.name_input_right, i) for i in range(self.n_partitions_right)}
         # Protect against mutations later on with frozenset
         keys = frozenset(keys)
         for part in parts_out:
@@ -354,6 +352,7 @@ class HashJoinP2PLayer(Layer):
         parameter.
         """
         parts_out = self._keys_to_parts(keys)
+
         culled_deps = self._cull_dependencies(keys, parts_out=parts_out)
         if parts_out != set(self.parts_out):
             culled_layer = self._cull(parts_out)
@@ -363,18 +362,22 @@ class HashJoinP2PLayer(Layer):
 
     def _construct_graph(self) -> dict[tuple | str, tuple]:
         token_left = tokenize(
-            "hash-join",
+            # Include self.name to ensure that shuffle IDs are unique for individual
+            # merge operations. Reusing shuffles between merges is dangerous because of
+            # required coordination and complexity introduced through dynamic clusters.
+            self.name,
             self.name_input_left,
             self.left_on,
-            self.npartitions,
-            self.parts_out,
+            self.left_index,
         )
         token_right = tokenize(
-            "hash-join",
+            # Include self.name to ensure that shuffle IDs are unique for individual
+            # merge operations. Reusing shuffles between merges is dangerous because of
+            # required coordination and complexity introduced through dynamic clusters.
+            self.name,
             self.name_input_right,
             self.right_on,
-            self.npartitions,
-            self.parts_out,
+            self.right_index,
         )
         dsk: dict[tuple | str, tuple] = {}
         name_left = "hash-join-transfer-" + token_left
