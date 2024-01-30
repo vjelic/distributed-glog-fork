@@ -83,9 +83,10 @@ from distributed.utils import DASK_USE_ROCM
 if DASK_USE_ROCM:
     from distributed.diagnostics import rocml
 else:
-    from distributed.diagnostics import nvml
-from distributed.diagnostics.plugin import _get_plugin_name
-from distributed.diskutils import WorkDir, WorkSpace
+    from distributed.diagnostics import nvml, rmm
+from distributed.diagnostics.plugin import WorkerPlugin, _get_plugin_name
+from distributed.diskutils import WorkSpace
+from distributed.exceptions import Reschedule
 from distributed.http import get_handlers
 from distributed.metrics import context_meter, thread_time, time
 from distributed.node import ServerNode
