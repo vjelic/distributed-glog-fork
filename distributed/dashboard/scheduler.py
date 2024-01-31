@@ -20,6 +20,7 @@ else:
         gpu_memory_doc,
         gpu_utilization_doc,
     )
+from distributed.dashboard.components.rmm import rmm_memory_doc
 from distributed.dashboard.components.scheduler import (
     AggregateAction,
     BandwidthTypes,
