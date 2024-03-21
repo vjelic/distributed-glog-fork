@@ -4,6 +4,7 @@ import asyncio
 import atexit
 import copy
 import inspect
+import itertools
 import json
 import logging
 import os
@@ -31,7 +32,7 @@ from packaging.version import parse as parse_version
 from tlz import first, groupby, merge, partition_all, valmap
 
 import dask
-from dask.base import collections_to_dsk, normalize_token, tokenize
+from dask.base import collections_to_dsk, tokenize
 from dask.core import flatten, validate_key
 from dask.highlevelgraph import HighLevelGraph
 from dask.optimization import SubgraphCallable
@@ -41,6 +42,7 @@ from dask.utils import (
     ensure_dict,
     format_bytes,
     funcname,
+    parse_bytes,
     parse_timedelta,
     shorten_traceback,
     typename,
@@ -209,11 +211,15 @@ class Future(WrappedKey):
 
     _cb_executor = None
     _cb_executor_pid = None
+    _counter = itertools.count()
+    # Make sure this stays unique even across multiple processes or hosts
+    _uid = uuid.uuid4().hex
 
-    def __init__(self, key, client=None, inform=True, state=None):
+    def __init__(self, key, client=None, inform=True, state=None, _id=None):
         self.key = key
         self._cleared = False
         self._client = client
+        self._id = _id or (Future._uid, next(Future._counter))
         self._input_state = state
         self._inform = inform
         self._state = None
@@ -373,7 +379,7 @@ class Future(WrappedKey):
         return self.client.sync(self._exception, callback_timeout=timeout, **kwargs)
 
     def add_done_callback(self, fn):
-        """Call callback on future when callback has finished
+        """Call callback on future when future has finished
 
         The callback ``fn`` should take the future as its only argument.  This
         will be called regardless of if the future completes successfully,
@@ -498,8 +504,16 @@ class Future(WrappedKey):
             except TypeError:  # pragma: no cover
                 pass  # Shutting down, add_callback may be None
 
+    @staticmethod
+    def make_future(key, id):
+        # Can't use kwargs in pickle __reduce__ methods
+        return Future(key=key, _id=id)
+
     def __reduce__(self) -> str | tuple[Any, ...]:
-        return Future, (self.key,)
+        return Future.make_future, (self.key, self._id)
+
+    def __dask_tokenize__(self):
+        return (type(self).__name__, self.key, self._id)
 
     def __del__(self):
         try:
@@ -640,18 +654,6 @@ async def done_callback(future, callback):
     while future.status == "pending":
         await future._state.wait()
     callback(future)
-
-
-@partial(normalize_token.register, Future)
-def normalize_future(f):
-    """Returns the key and the type as a list
-
-    Parameters
-    ----------
-    list
-        The key and the type
-    """
-    return [f.key, type(f)]
 
 
 class AllExit(Exception):
@@ -1496,8 +1498,7 @@ class Client(SyncMethodMixin):
         await self._close(
             # if we're handling an exception, we assume that it's more
             # important to deliver that exception than shutdown gracefully.
-            fast=exc_type
-            is not None
+            fast=(exc_type is not None)
         )
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -1576,7 +1577,7 @@ class Client(SyncMethodMixin):
 
                 breakout = False
                 for msg in msgs:
-                    logger.debug("Client receives message %s", msg)
+                    logger.debug("Client %s receives message %s", self.id, msg)
 
                     if "status" in msg and "error" in msg["status"]:
                         typ, exc, tb = clean_exception(**msg)
@@ -1668,16 +1669,15 @@ class Client(SyncMethodMixin):
                 await wait_for(handle_report_task, 0 if fast else 2)
 
     @log_errors
-    async def _close(self, fast=False):
-        """
-        Send close signal and wait until scheduler completes
+    async def _close(self, fast: bool = False) -> None:
+        """Send close signal and wait until scheduler completes
 
         If fast is True, the client will close forcefully, by cancelling tasks
         the background _handle_report_task.
         """
-        # TODO: aclose more forcefully by aborting the RPC and cancelling all
+        # TODO: close more forcefully by aborting the RPC and cancelling all
         # background tasks.
-        # see https://trio.readthedocs.io/en/stable/reference-io.html#trio.aclose_forcefully
+        # See https://trio.readthedocs.io/en/stable/reference-io.html#trio.aclose_forcefully
         if self.status == "closed":
             return
 
@@ -1772,18 +1772,7 @@ class Client(SyncMethodMixin):
                 coro = wait_for(coro, timeout)
             return coro
 
-        if self._start_arg is None:
-            with suppress(AttributeError):
-                f = self.cluster.close()
-                if asyncio.iscoroutine(f):
-
-                    async def _():
-                        await f
-
-                    self.sync(_)
-
         sync(self.loop, self._close, fast=True, callback_timeout=timeout)
-
         assert self.status == "closed"
 
         if not is_python_shutting_down():
@@ -3095,8 +3084,12 @@ class Client(SyncMethodMixin):
                 module_name = fr.f_back.f_globals["__name__"]  # type: ignore
                 if module_name == "__channelexec__":
                     break  # execnet; pytest-xdist  # pragma: nocover
+                try:
+                    module_name = sys.modules[module_name].__name__
+                except KeyError:
+                    # Ignore pathological cases where the module name isn't in `sys.modules`
+                    break
                 # Ignore IPython related wrapping functions to user code
-                module_name = sys.modules[module_name].__name__
                 if module_name.endswith("interactiveshell"):
                     break
 
@@ -3158,7 +3151,9 @@ class Client(SyncMethodMixin):
             header, frames = serialize(ToPickle(dsk), on_error="raise")
 
             pickled_size = sum(map(nbytes, [header] + frames))
-            if pickled_size > 10_000_000:
+            if pickled_size > parse_bytes(
+                dask.config.get("distributed.admin.large-graph-warning-threshold")
+            ):
                 warnings.warn(
                     f"Sending large graph of size {format_bytes(pickled_size)}.\n"
                     "This may cause some slowdown.\n"
@@ -3440,9 +3435,11 @@ class Client(SyncMethodMixin):
 
         if traverse:
             collections = tuple(
-                dask.delayed(a)
-                if isinstance(a, (list, set, tuple, dict, Iterator))
-                else a
+                (
+                    dask.delayed(a)
+                    if isinstance(a, (list, set, tuple, dict, Iterator))
+                    else a
+                )
                 for a in collections
             )
 
@@ -4924,7 +4921,10 @@ class Client(SyncMethodMixin):
         )
 
     def register_scheduler_plugin(
-        self, plugin: SchedulerPlugin, name: str | None = None, idempotent: bool = False
+        self,
+        plugin: SchedulerPlugin,
+        name: str | None = None,
+        idempotent: bool | None = None,
     ):
         """
         Register a scheduler plugin.

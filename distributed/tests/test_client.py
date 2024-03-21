@@ -447,16 +447,18 @@ def test_Future_release_sync(c):
     x = c.submit(div, 1, 1)
     x.result()
     x.release()
-    poll_for(lambda: not c.futures, timeout=0.3)
+    poll_for(lambda: not c.futures, timeout=5)
 
-    x = c.submit(slowinc, 1, delay=0.8)
+    ev = Event()
+    x = c.submit(lambda ev: ev.wait(), ev)
     x.release()
-    poll_for(lambda: not c.futures, timeout=0.3)
+    poll_for(lambda: not c.futures, timeout=5)
+    ev.set()
 
     x = c.submit(div, 1, 0)
     x.exception()
     x.release()
-    poll_for(lambda: not c.futures, timeout=0.3)
+    poll_for(lambda: not c.futures, timeout=5)
 
 
 @pytest.mark.parametrize("method", ["result", "gather"])
@@ -861,11 +863,13 @@ async def test_tokenize_on_futures(c, s, a, b):
     y = c.submit(inc, 1)
     tok = tokenize(x)
     assert tokenize(x) == tokenize(x)
-    assert tokenize(x) == tokenize(y)
+    # Tokens must be unique per instance
+    # See https://github.com/dask/distributed/issues/8561
+    assert tokenize(x) != tokenize(y)
 
     c.futures[x.key].finish()
 
-    assert tok == tokenize(y)
+    assert tok != tokenize(y)
 
 
 @pytest.mark.skipif(not LINUX, reason="Need 127.0.0.2 to mean localhost")
@@ -1008,17 +1012,23 @@ async def test_map_quotes(c, s, a, b):
     assert all(result)
 
 
-@gen_cluster()
-async def test_two_consecutive_clients_share_results(s, a, b):
-    async with Client(s.address, asynchronous=True) as c:
-        x = c.submit(random.randint, 0, 1000, pure=True)
-        xx = await x
+@gen_cluster(client=True)
+async def test_two_consecutive_clients_share_results(c, s, a, b):
+    # Calling c.submit(random.randint) directly would cause the client to tokenize and
+    # deep-copy the global random state. Also, Client and/or Scheduler draw from the
+    # global random state, so its state (and thus, token) would be different between the
+    # two calls to submit().
+    def f():
+        return random.randint(0, 1000)
 
-        async with Client(s.address, asynchronous=True) as f:
-            y = f.submit(random.randint, 0, 1000, pure=True)
-            yy = await y
+    x = c.submit(f)
+    xx = await x
 
-            assert xx == yy
+    async with Client(s.address, asynchronous=True) as c2:
+        y = c2.submit(f)
+        yy = await y
+
+    assert xx == yy
 
 
 @gen_cluster(client=True)
@@ -4821,7 +4831,7 @@ async def test_recreate_error_collection(c, s, a, b):
             raise ValueError
         return x
 
-    df2 = df.a.map(make_err)
+    df2 = df.a.map(make_err, meta=df.a)
     f = c.compute(df2)
     error_f = await c._get_errored_future(f)
     function, args, kwargs = await c._get_components_from_future(error_f)
@@ -4929,7 +4939,7 @@ async def test_recreate_task_collection(c, s, a, b):
 
     df = dd.from_pandas(pd.DataFrame({"a": [0, 1, 2, 3, 4]}), chunksize=2)
 
-    df2 = df.a.map(lambda x: x + 1)
+    df2 = df.a.map(inc, meta=df.a)
     f = c.compute(df2)
 
     function, args, kwargs = await c._get_components_from_future(f)
@@ -5190,7 +5200,10 @@ def test_quiet_client_close(loop):
             threads_per_worker=4,
         ) as c:
             futures = c.map(slowinc, range(1000), delay=0.01)
-            sleep(0.200)  # stop part-way
+            # Stop part-way
+            s = c.cluster.scheduler
+            while sum(ts.state == "memory" for ts in s.tasks.values()) < 20:
+                sleep(0.01)
         sleep(0.1)  # let things settle
 
     out = logger.getvalue()
@@ -5969,6 +5982,8 @@ async def test_config_scheduler_address(s, a, b):
 async def test_warn_when_submitting_large_values(c, s):
     with pytest.warns(UserWarning, match="Sending large graph of size"):
         future = c.submit(lambda x: x + 1, b"0" * 10_000_000)
+    with dask.config.set({"distributed.admin.large-graph-warning-threshold": "1GB"}):
+        future = c.submit(lambda x: x + 1, b"0" * 10_000_000)
 
 
 @gen_cluster(client=True, nthreads=[])
@@ -6546,11 +6561,9 @@ async def test_config_inherited_by_subprocess():
 
 @gen_cluster(client=True)
 async def test_futures_of_sorted(c, s, a, b):
-    pytest.importorskip("dask.dataframe")
-    df = await dask.datasets.timeseries(dtypes={"x": int}).persist()
-    futures = futures_of(df)
-    for k, f in zip(df.__dask_keys__(), futures):
-        assert str(k) in str(f)
+    b = dask.bag.from_sequence(range(10), npartitions=5).persist()
+    futures = futures_of(b)
+    assert [fut.key for fut in futures] == [k for k in b.__dask_keys__()]
 
 
 @gen_cluster(
