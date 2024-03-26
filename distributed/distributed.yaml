@@ -268,7 +268,7 @@ distributed:
   diagnostics:
     nvml: True
     rocml: True
-    cudf: False
+    cudf: True
     computations:
       max-history: 100
       nframes: 0
