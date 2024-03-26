@@ -1981,19 +1981,20 @@ def is_amd_gpu_available():
     import subprocess
     import re
 
-    check_cmd ="rocminfo"
+    check_cmd ='rocminfo'
     try:
-        ps1 = subprocess.run(check_cmd.split(),  stdout=subprocess.PIPE,
-                  stderr=subprocess.STDOUT, check=True)
-        for line in str.splitlines(ps1.stdout.decode('utf-8')):
-            if re.search(r'gfx906', line):   # MI50/MI60
-                return True
-            elif re.search(r'gfx908', line): # MI100
-                return True
-            elif re.search(r'gfx90a', line): # MI200
+        proc_complete = subprocess.run(
+            check_cmd.split(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+        for line in proc_complete.stdout.decode('utf-8').split():
+            if re.search(r"(gfx908|gfx90a|gfx940|gfx941|gfx942|gfx1100)", line):
                 return True
         return False
     except (FileNotFoundError, subprocess.CalledProcessError) as err:
+        print('  Error => ', str(err))
         return False
 
 

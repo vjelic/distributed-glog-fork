@@ -8,9 +8,13 @@ from typing import NamedTuple
 from packaging.version import parse as parse_version
 
 import dask
+from distributed.utils import DASK_USE_ROCM
 
 try:
-    import pynvml
+    if DASK_USE_ROCM:
+        import distributed.diagnostics.pyrocml as pynvml
+    else:
+        import pynvml
 except ImportError:
     pynvml = None
 

@@ -133,7 +133,7 @@ applications = {
 
 
 @memoize
-def template_variables():
+def template_variables(scheduler):
     if DASK_USE_ROCM:
         from distributed.diagnostics.rocml import device_get_count
     else:
@@ -145,7 +145,7 @@ def template_variables():
             "workers",
             "tasks",
             "system",
-            "gpu",
+            *(["gpu"] if device_get_count() > 0 else []),
             "profile",
             "graph",
             "groups",
