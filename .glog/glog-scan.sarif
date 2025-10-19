@@ -12,54 +12,6 @@
           "informationUri": "https://www.glog.ai",
           "rules": [
             {
-              "id": "ad7e35ef-769a-3154-9e6d-61ebb9036dea",
-              "name": "resources.rules.dangerous-subprocess-use",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.dangerous-subprocess-use"
-              },
-              "fullDescription": {
-                "text": "Detected subprocess function '$FUNC' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "warning"
-              },
-              "help": {
-                "text": "Detected subprocess function '$FUNC' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "Detected subprocess function '$FUNC' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess](https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess)\n - [https://docs.python.org/3/library/subprocess.html](https://docs.python.org/3/library/subprocess.html)\n - [https://docs.python.org/3/library/shlex.html](https://docs.python.org/3/library/shlex.html)\n"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.dangerous-subprocess-use"
-                ]
-              }
-            },
-            {
-              "id": "394f290d-f748-3353-b7e3-4e9953ad9565",
-              "name": "resources.rules.dlint-catastrophic-redos",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.dlint-catastrophic-redos"
-              },
-              "fullDescription": {
-                "text": "Regex `$X` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "error"
-              },
-              "help": {
-                "text": "Regex `$X` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "Regex `$X` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [https://r2c.dev/blog/2020/finding-python-redos-bugs-at-scale-using-dlint-and-r2c/](https://r2c.dev/blog/2020/finding-python-redos-bugs-at-scale-using-dlint-and-r2c/)\n - [https://r2c.dev/blog/2020/improving-redos-detection-with-dlint-and-r2c/](https://r2c.dev/blog/2020/improving-redos-detection-with-dlint-and-r2c/)\n"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.dlint-catastrophic-redos"
-                ]
-              }
-            },
-            {
               "id": "0f72025d-8a99-319d-b990-b321489f9f85",
               "name": "resources.rules.useless-assignment-keyed",
               "shortDescription": {
@@ -85,6 +37,54 @@
             },
             {
               "id": "a155ab58-a05f-37da-a7a0-52cbc5919f90",
+              "name": "resources.rules.dlint-catastrophic-redos",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.dlint-catastrophic-redos"
+              },
+              "fullDescription": {
+                "text": "Regex `$X` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "error"
+              },
+              "help": {
+                "text": "Regex `$X` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "Regex `$X` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [https://r2c.dev/blog/2020/finding-python-redos-bugs-at-scale-using-dlint-and-r2c/](https://r2c.dev/blog/2020/finding-python-redos-bugs-at-scale-using-dlint-and-r2c/)\n - [https://r2c.dev/blog/2020/improving-redos-detection-with-dlint-and-r2c/](https://r2c.dev/blog/2020/improving-redos-detection-with-dlint-and-r2c/)\n"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.dlint-catastrophic-redos"
+                ]
+              }
+            },
+            {
+              "id": "ad7e35ef-769a-3154-9e6d-61ebb9036dea",
+              "name": "resources.rules.dangerous-subprocess-use",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.dangerous-subprocess-use"
+              },
+              "fullDescription": {
+                "text": "Detected subprocess function '$FUNC' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "Detected subprocess function '$FUNC' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "Detected subprocess function '$FUNC' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess](https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess)\n - [https://docs.python.org/3/library/subprocess.html](https://docs.python.org/3/library/subprocess.html)\n - [https://docs.python.org/3/library/shlex.html](https://docs.python.org/3/library/shlex.html)\n"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.dangerous-subprocess-use"
+                ]
+              }
+            },
+            {
+              "id": "394f290d-f748-3353-b7e3-4e9953ad9565",
               "name": "resources.rules.dlint-catastrophic-redos",
               "shortDescription": {
                 "text": "Opengrep Finding: resources.rules.dlint-catastrophic-redos"
@@ -204,7 +204,7 @@
               }
             },
             {
-              "id": "dbafc7ae-f97b-345b-9baa-60c98966b4c4",
+              "id": "c2fa4e36-7a08-3975-a8b7-9ae32a79cb9d",
               "name": "resources.rules.dlint-catastrophic-redos",
               "shortDescription": {
                 "text": "Opengrep Finding: resources.rules.dlint-catastrophic-redos"
@@ -228,7 +228,7 @@
               }
             },
             {
-              "id": "c2fa4e36-7a08-3975-a8b7-9ae32a79cb9d",
+              "id": "dbafc7ae-f97b-345b-9baa-60c98966b4c4",
               "name": "resources.rules.dlint-catastrophic-redos",
               "shortDescription": {
                 "text": "Opengrep Finding: resources.rules.dlint-catastrophic-redos"
@@ -982,30 +982,6 @@
               }
             },
             {
-              "id": "5753c95e-b6aa-395c-91ef-ea8b6289d52c",
-              "name": "resources.rules.arbitrary-sleep",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.arbitrary-sleep"
-              },
-              "fullDescription": {
-                "text": "time.sleep() call; did you mean to leave this in?"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "error"
-              },
-              "help": {
-                "text": "time.sleep() call; did you mean to leave this in?\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "time.sleep() call; did you mean to leave this in?\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.arbitrary-sleep"
-                ]
-              }
-            },
-            {
               "id": "5eb21bbb-701e-398a-84a4-d7249f2e9c9a",
               "name": "resources.rules.dangerous-subprocess-use",
               "shortDescription": {
@@ -1026,6 +1002,30 @@
                 "precision": "very-high",
                 "tags": [
                   "resources.rules.dangerous-subprocess-use"
+                ]
+              }
+            },
+            {
+              "id": "5753c95e-b6aa-395c-91ef-ea8b6289d52c",
+              "name": "resources.rules.arbitrary-sleep",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.arbitrary-sleep"
+              },
+              "fullDescription": {
+                "text": "time.sleep() call; did you mean to leave this in?"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "error"
+              },
+              "help": {
+                "text": "time.sleep() call; did you mean to leave this in?\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "time.sleep() call; did you mean to leave this in?\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.arbitrary-sleep"
                 ]
               }
             },
@@ -1078,30 +1078,6 @@
               }
             },
             {
-              "id": "257ae9e7-5ae5-31a5-8d2f-c457a0861a2d",
-              "name": "resources.rules.return-in-init",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.return-in-init"
-              },
-              "fullDescription": {
-                "text": "`return` should never appear inside a class __init__ function. This will cause a runtime error."
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "error"
-              },
-              "help": {
-                "text": "`return` should never appear inside a class __init__ function. This will cause a runtime error.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "`return` should never appear inside a class __init__ function. This will cause a runtime error.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.return-in-init"
-                ]
-              }
-            },
-            {
               "id": "21111eb0-a695-3ac3-a082-d9ff25247731",
               "name": "resources.rules.dangerous-subprocess-use",
               "shortDescription": {
@@ -1122,6 +1098,30 @@
                 "precision": "very-high",
                 "tags": [
                   "resources.rules.dangerous-subprocess-use"
+                ]
+              }
+            },
+            {
+              "id": "257ae9e7-5ae5-31a5-8d2f-c457a0861a2d",
+              "name": "resources.rules.return-in-init",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.return-in-init"
+              },
+              "fullDescription": {
+                "text": "`return` should never appear inside a class __init__ function. This will cause a runtime error."
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "error"
+              },
+              "help": {
+                "text": "`return` should never appear inside a class __init__ function. This will cause a runtime error.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "`return` should never appear inside a class __init__ function. This will cause a runtime error.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.return-in-init"
                 ]
               }
             },
@@ -1271,30 +1271,6 @@
               }
             },
             {
-              "id": "ebd034b3-9245-3d19-874c-a84f91ca9c4c",
-              "name": "resources.rules.template-href-var",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.template-href-var"
-              },
-              "fullDescription": {
-                "text": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "warning"
-              },
-              "help": {
-                "text": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [https://flask.palletsprojects.com/en/1.1.x/security/#cross-site-scripting-xss](https://flask.palletsprojects.com/en/1.1.x/security/#cross-site-scripting-xss)\n - [https://docs.djangoproject.com/en/3.1/ref/templates/builtins/#url](https://docs.djangoproject.com/en/3.1/ref/templates/builtins/#url)\n - [https://content-security-policy.com/](https://content-security-policy.com/)\n"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.template-href-var"
-                ]
-              }
-            },
-            {
               "id": "9672d329-005c-3d5e-8680-71d1da538dec",
               "name": "resources.rules.missing-noopener",
               "shortDescription": {
@@ -1315,6 +1291,30 @@
                 "precision": "very-high",
                 "tags": [
                   "resources.rules.missing-noopener"
+                ]
+              }
+            },
+            {
+              "id": "ebd034b3-9245-3d19-874c-a84f91ca9c4c",
+              "name": "resources.rules.template-href-var",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.template-href-var"
+              },
+              "fullDescription": {
+                "text": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [https://flask.palletsprojects.com/en/1.1.x/security/#cross-site-scripting-xss](https://flask.palletsprojects.com/en/1.1.x/security/#cross-site-scripting-xss)\n - [https://docs.djangoproject.com/en/3.1/ref/templates/builtins/#url](https://docs.djangoproject.com/en/3.1/ref/templates/builtins/#url)\n - [https://content-security-policy.com/](https://content-security-policy.com/)\n"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.template-href-var"
                 ]
               }
             },
@@ -1983,7 +1983,7 @@
               }
             },
             {
-              "id": "544461a5-5260-33fc-8b3c-ce5490bab963",
+              "id": "a4c96d07-164b-358a-b009-10bfb6a97a11",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
                 "text": "Opengrep Finding: python.lang.security.deserialization.pickle.avoid-pickle"
@@ -2008,7 +2008,7 @@
               }
             },
             {
-              "id": "a4c96d07-164b-358a-b009-10bfb6a97a11",
+              "id": "544461a5-5260-33fc-8b3c-ce5490bab963",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
                 "text": "Opengrep Finding: python.lang.security.deserialization.pickle.avoid-pickle"
@@ -2083,7 +2083,7 @@
               }
             },
             {
-              "id": "ddbf2ff9-52e8-306d-b638-7b96612d5f58",
+              "id": "bea5fa53-24b2-334f-8693-85dcb50b761d",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
                 "text": "Opengrep Finding: python.lang.security.deserialization.pickle.avoid-pickle"
@@ -2108,7 +2108,7 @@
               }
             },
             {
-              "id": "bea5fa53-24b2-334f-8693-85dcb50b761d",
+              "id": "ddbf2ff9-52e8-306d-b638-7b96612d5f58",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
                 "text": "Opengrep Finding: python.lang.security.deserialization.pickle.avoid-pickle"
@@ -2183,30 +2183,6 @@
               }
             },
             {
-              "id": "976daa18-f30f-3763-9120-e163566a859c",
-              "name": "resources.rules.string-concat-in-list",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.string-concat-in-list"
-              },
-              "fullDescription": {
-                "text": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "warning"
-              },
-              "help": {
-                "text": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.string-concat-in-list"
-                ]
-              }
-            },
-            {
               "id": "c7305651-91fc-39ef-9775-712aecfb3e49",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
@@ -2228,6 +2204,30 @@
                 "precision": "very-high",
                 "tags": [
                   "python.lang.security.deserialization.pickle.avoid-pickle"
+                ]
+              }
+            },
+            {
+              "id": "976daa18-f30f-3763-9120-e163566a859c",
+              "name": "resources.rules.string-concat-in-list",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.string-concat-in-list"
+              },
+              "fullDescription": {
+                "text": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.string-concat-in-list"
                 ]
               }
             },
@@ -2304,6 +2304,30 @@
               }
             },
             {
+              "id": "d6ee61e4-7c4e-34f8-815b-db57cbbae493",
+              "name": "resources.rules.pdb-remove",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.pdb-remove"
+              },
+              "fullDescription": {
+                "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.pdb-remove"
+                ]
+              }
+            },
+            {
               "id": "0f0ad707-7257-3615-a4ac-40b744aff676",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
@@ -2353,30 +2377,6 @@
               }
             },
             {
-              "id": "0ccc0909-f4ad-3ab6-ad7e-8f4477cab0b8",
-              "name": "resources.rules.pdb-remove",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.pdb-remove"
-              },
-              "fullDescription": {
-                "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "warning"
-              },
-              "help": {
-                "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.pdb-remove"
-                ]
-              }
-            },
-            {
               "id": "e4217b59-bc1b-3d99-b9ae-0b0ac0e7b7f3",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
@@ -2398,6 +2398,30 @@
                 "precision": "very-high",
                 "tags": [
                   "python.lang.security.deserialization.pickle.avoid-pickle"
+                ]
+              }
+            },
+            {
+              "id": "0ccc0909-f4ad-3ab6-ad7e-8f4477cab0b8",
+              "name": "resources.rules.pdb-remove",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.pdb-remove"
+              },
+              "fullDescription": {
+                "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.pdb-remove"
                 ]
               }
             },
@@ -2451,7 +2475,7 @@
               }
             },
             {
-              "id": "11e1eff9-e848-37c8-9f4e-a7aed36bc4a2",
+              "id": "b023257f-a9cd-3398-b8ea-892076bf087e",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
                 "text": "Opengrep Finding: python.lang.security.deserialization.pickle.avoid-pickle"
@@ -2476,7 +2500,7 @@
               }
             },
             {
-              "id": "b023257f-a9cd-3398-b8ea-892076bf087e",
+              "id": "11e1eff9-e848-37c8-9f4e-a7aed36bc4a2",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
                 "text": "Opengrep Finding: python.lang.security.deserialization.pickle.avoid-pickle"
@@ -2551,6 +2575,30 @@
               }
             },
             {
+              "id": "3b817771-c302-30aa-81cf-f4b4006af566",
+              "name": "resources.rules.useless-inner-function",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.useless-inner-function"
+              },
+              "fullDescription": {
+                "text": "function `$FF` is defined inside a function but never used"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "error"
+              },
+              "help": {
+                "text": "function `$FF` is defined inside a function but never used\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "function `$FF` is defined inside a function but never used\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.useless-inner-function"
+                ]
+              }
+            },
+            {
               "id": "2943445f-7f32-37c1-a683-fda7817f6031",
               "name": "python.lang.security.deserialization.pickle.avoid-pickle",
               "shortDescription": {
@@ -2572,30 +2620,6 @@
                 "precision": "very-high",
                 "tags": [
                   "python.lang.security.deserialization.pickle.avoid-pickle"
-                ]
-              }
-            },
-            {
-              "id": "3b817771-c302-30aa-81cf-f4b4006af566",
-              "name": "resources.rules.useless-inner-function",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.useless-inner-function"
-              },
-              "fullDescription": {
-                "text": "function `$FF` is defined inside a function but never used"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "error"
-              },
-              "help": {
-                "text": "function `$FF` is defined inside a function but never used\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "function `$FF` is defined inside a function but never used\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.useless-inner-function"
                 ]
               }
             },
@@ -2967,30 +2991,6 @@
               }
             },
             {
-              "id": "19844304-4890-3b5b-b0b9-815c38277cd9",
-              "name": "resources.rules.insecure-xml-use",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.insecure-xml-use"
-              },
-              "fullDescription": {
-                "text": "Insecure XML parsing functionality, prefer 'defusedxml'"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "warning"
-              },
-              "help": {
-                "text": "Insecure XML parsing functionality, prefer 'defusedxml'\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "Insecure XML parsing functionality, prefer 'defusedxml'\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.insecure-xml-use"
-                ]
-              }
-            },
-            {
               "id": "5265e71e-8ac5-33ca-865c-f9a5488623d6",
               "name": "python.lang.security.audit.non-literal-import.non-literal-import",
               "shortDescription": {
@@ -3012,6 +3012,30 @@
                 "precision": "very-high",
                 "tags": [
                   "python.lang.security.audit.non-literal-import.non-literal-import"
+                ]
+              }
+            },
+            {
+              "id": "19844304-4890-3b5b-b0b9-815c38277cd9",
+              "name": "resources.rules.insecure-xml-use",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.insecure-xml-use"
+              },
+              "fullDescription": {
+                "text": "Insecure XML parsing functionality, prefer 'defusedxml'"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "Insecure XML parsing functionality, prefer 'defusedxml'\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "Insecure XML parsing functionality, prefer 'defusedxml'\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.insecure-xml-use"
                 ]
               }
             },
@@ -3065,30 +3089,6 @@
               }
             },
             {
-              "id": "c058a88e-b1fc-38e8-a170-921d3838ec69",
-              "name": "resources.rules.return-not-in-function",
-              "shortDescription": {
-                "text": "Opengrep Finding: resources.rules.return-not-in-function"
-              },
-              "fullDescription": {
-                "text": "`return` only makes sense inside a function"
-              },
-              "defaultConfiguration": {
-                "enabled": true,
-                "level": "warning"
-              },
-              "help": {
-                "text": "`return` only makes sense inside a function\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
-                "markdown": "`return` only makes sense inside a function\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
-              },
-              "properties": {
-                "precision": "very-high",
-                "tags": [
-                  "resources.rules.return-not-in-function"
-                ]
-              }
-            },
-            {
               "id": "5f609fca-c70c-36f1-938e-0fb7897749c1",
               "name": "resources.rules.useless-inner-function",
               "shortDescription": {
@@ -3109,6 +3109,30 @@
                 "precision": "very-high",
                 "tags": [
                   "resources.rules.useless-inner-function"
+                ]
+              }
+            },
+            {
+              "id": "c058a88e-b1fc-38e8-a170-921d3838ec69",
+              "name": "resources.rules.return-not-in-function",
+              "shortDescription": {
+                "text": "Opengrep Finding: resources.rules.return-not-in-function"
+              },
+              "fullDescription": {
+                "text": "`return` only makes sense inside a function"
+              },
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning"
+              },
+              "help": {
+                "text": "`return` only makes sense inside a function\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro",
+                "markdown": "`return` only makes sense inside a function\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>"
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "resources.rules.return-not-in-function"
                 ]
               }
             },
@@ -4024,68 +4048,6 @@
       "language": "en-US",
       "results": [
         {
-          "ruleId": "ad7e35ef-769a-3154-9e6d-61ebb9036dea",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Detected subprocess function 'STARTUPINFO' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/_version.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 97,
-                  "startColumn": 23,
-                  "endLine": 97,
-                  "endColumn": 47,
-                  "snippet": {
-                    "text": "        startupinfo = subprocess.STARTUPINFO()"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "7d1a36f41dab2b99878e43f60af39e5e87620cc0032cc170cf9bad5137a9c2a6ce395bd537ae1a2755de94b2dd7ae7ac0640d05255aa10c5c81b75fd985c8442_0"
-          },
-          "properties": {}
-        },
-        {
-          "ruleId": "394f290d-f748-3353-b7e3-4e9953ad9565",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Regex `r\"(distributed/.*test.*)::([^ ]*)\"\n        r\"( (.*)(PASSED|FAILED|ERROR|SKIPPED|XFAIL|RERUN|LEAKED).*| )$\"` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "continuous_integration/scripts/parse_stdout.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 32,
-                  "startColumn": 13,
-                  "endLine": 35,
-                  "endColumn": 6,
-                  "snippet": {
-                    "text": "    match = re.compile(\n        r\"(distributed/.*test.*)::([^ ]*)\"\n        r\"( (.*)(PASSED|FAILED|ERROR|SKIPPED|XFAIL|RERUN|LEAKED).*| )$\"\n    )"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "b7d50bed28676db6f9f1a9fefe1c8da529194d2adaa4710da6dfd678374c1a192e87ab7d4a534d947cff785e623414c5993daef322a2fa5c03ea8c7e6b2b2854_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "0f72025d-8a99-319d-b990-b321489f9f85",
           "kind": "fail",
           "level": "warning",
@@ -4144,6 +4106,68 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "9cde2ea05067db90bb1582317c731f67795698b851e053e4529e8de44d1ce1e5c6f55d195c45bcfde63a0da6516c3a259684f3ab85cbf853427501db9368bd77_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "ad7e35ef-769a-3154-9e6d-61ebb9036dea",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Detected subprocess function 'STARTUPINFO' without a static string. If this data can be\ncontrolled by a malicious actor, it may be an instance of command injection.\nAudit the use of this call to ensure it is not controllable by an external resource.\nYou may consider using 'shlex.escape()'.\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/_version.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 97,
+                  "startColumn": 23,
+                  "endLine": 97,
+                  "endColumn": 47,
+                  "snippet": {
+                    "text": "        startupinfo = subprocess.STARTUPINFO()"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "7d1a36f41dab2b99878e43f60af39e5e87620cc0032cc170cf9bad5137a9c2a6ce395bd537ae1a2755de94b2dd7ae7ac0640d05255aa10c5c81b75fd985c8442_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "394f290d-f748-3353-b7e3-4e9953ad9565",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Regex `r\"(distributed/.*test.*)::([^ ]*)\"\n        r\"( (.*)(PASSED|FAILED|ERROR|SKIPPED|XFAIL|RERUN|LEAKED).*| )$\"` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "continuous_integration/scripts/parse_stdout.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 13,
+                  "endLine": 35,
+                  "endColumn": 6,
+                  "snippet": {
+                    "text": "    match = re.compile(\n        r\"(distributed/.*test.*)::([^ ]*)\"\n        r\"( (.*)(PASSED|FAILED|ERROR|SKIPPED|XFAIL|RERUN|LEAKED).*| )$\"\n    )"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "b7d50bed28676db6f9f1a9fefe1c8da529194d2adaa4710da6dfd678374c1a192e87ab7d4a534d947cff785e623414c5993daef322a2fa5c03ea8c7e6b2b2854_0"
           },
           "properties": {}
         },
@@ -4272,37 +4296,6 @@
           "properties": {}
         },
         {
-          "ruleId": "dbafc7ae-f97b-345b-9baa-60c98966b4c4",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Regex `r\"\\d\"` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/_version.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 236,
-                  "startColumn": 36,
-                  "endLine": 236,
-                  "endColumn": 55,
-                  "snippet": {
-                    "text": "        tags = {r for r in refs if re.search(r\"\\d\", r)}"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "fb144c97d16e49197fdd17b8b4283989895eb694dca39e2f17f2aa14dbe82bc7bf5e6c54a4fe6a841022965100ca35bd287fa26fae438cc255ccbee074f40517_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "c2fa4e36-7a08-3975-a8b7-9ae32a79cb9d",
           "kind": "fail",
           "level": "warning",
@@ -4330,6 +4323,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "fb144c97d16e49197fdd17b8b4283989895eb694dca39e2f17f2aa14dbe82bc7bf5e6c54a4fe6a841022965100ca35bd287fa26fae438cc255ccbee074f40517_1"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "dbafc7ae-f97b-345b-9baa-60c98966b4c4",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Regex `r\"\\d\"` may be vulnerable to catastrophic backtracking, which may lead to denial of service attacks. (This rule only matches regex usage, not actual REDoS patterns. For full detection, use Semgrep Pro Engine.)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/_version.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 236,
+                  "startColumn": 36,
+                  "endLine": 236,
+                  "endColumn": 55,
+                  "snippet": {
+                    "text": "        tags = {r for r in refs if re.search(r\"\\d\", r)}"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "fb144c97d16e49197fdd17b8b4283989895eb694dca39e2f17f2aa14dbe82bc7bf5e6c54a4fe6a841022965100ca35bd287fa26fae438cc255ccbee074f40517_0"
           },
           "properties": {}
         },
@@ -5264,37 +5288,6 @@
           "properties": {}
         },
         {
-          "ruleId": "5753c95e-b6aa-395c-91ef-ea8b6289d52c",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "time.sleep() call; did you mean to leave this in?"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/diagnostics/memray.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 146,
-                  "startColumn": 5,
-                  "endLine": 146,
-                  "endColumn": 20,
-                  "snippet": {
-                    "text": "    time.sleep(0.1)"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "1e4247fe6e62a724eded95d45ed1aa03c55a531fb090754dee5ee622e88c622d62d3de937464a845414c9492e9bd35765133d50a64484b31fb361ed0139927de_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "5eb21bbb-701e-398a-84a4-d7249f2e9c9a",
           "kind": "fail",
           "level": "warning",
@@ -5322,6 +5315,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "2dc3e9693a87f3b046dc997929f3c541ac07701d07b50b487c3102e356219aafc460f1d58e0bc8c122614d17e392c39ae1a308e63d38af68ffc65e59b084b630_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "5753c95e-b6aa-395c-91ef-ea8b6289d52c",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "time.sleep() call; did you mean to leave this in?"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/diagnostics/memray.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 5,
+                  "endLine": 146,
+                  "endColumn": 20,
+                  "snippet": {
+                    "text": "    time.sleep(0.1)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "1e4247fe6e62a724eded95d45ed1aa03c55a531fb090754dee5ee622e88c622d62d3de937464a845414c9492e9bd35765133d50a64484b31fb361ed0139927de_0"
           },
           "properties": {}
         },
@@ -5388,37 +5412,6 @@
           "properties": {}
         },
         {
-          "ruleId": "257ae9e7-5ae5-31a5-8d2f-c457a0861a2d",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "`return` should never appear inside a class __init__ function. This will cause a runtime error."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/diagnostics/progress.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 300,
-                  "startColumn": 42,
-                  "endLine": 300,
-                  "endColumn": 58,
-                  "snippet": {
-                    "text": "        self.state = defaultdict(lambda: defaultdict(set))"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "2ed3d196d5dc932e0873be64973ccdd369a84776add573b7e5173ed25d96df1b5483c53de450ef08d4e16e2b95a9bf9785180256c9bccea1f181399a9d980279_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "21111eb0-a695-3ac3-a082-d9ff25247731",
           "kind": "fail",
           "level": "warning",
@@ -5446,6 +5439,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "532aa919e0254838d281d6c4c143e3ad8b39658034a2acdfa4e4b2937d3f26e9f1ac94292ed76e513480d9bd82eaee98bbf7dc28d3c3f55976a352e782031c09_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "257ae9e7-5ae5-31a5-8d2f-c457a0861a2d",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "`return` should never appear inside a class __init__ function. This will cause a runtime error."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/diagnostics/progress.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 300,
+                  "startColumn": 42,
+                  "endLine": 300,
+                  "endColumn": 58,
+                  "snippet": {
+                    "text": "        self.state = defaultdict(lambda: defaultdict(set))"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "2ed3d196d5dc932e0873be64973ccdd369a84776add573b7e5173ed25d96df1b5483c53de450ef08d4e16e2b95a9bf9785180256c9bccea1f181399a9d980279_0"
           },
           "properties": {}
         },
@@ -5636,37 +5660,6 @@
           "properties": {}
         },
         {
-          "ruleId": "ebd034b3-9245-3d19-874c-a84f91ca9c4c",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/http/templates/json-index.html",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 7,
-                  "startColumn": 1,
-                  "endLine": 7,
-                  "endColumn": 45,
-                  "snippet": {
-                    "text": "      <li><a href=\"{{url}}\">{{url}}</a></li>"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "30ae1a5f089ec779efd04e733eb207e2266d95adbd58189d76ca88c6aaaa0b588309e96b91c5da0ee017a8740d39e95ee7eb9979aa6c66f8a7b106f2d8ba09f4_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "9672d329-005c-3d5e-8680-71d1da538dec",
           "kind": "fail",
           "level": "warning",
@@ -5694,6 +5687,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "98cfa450128b640f4e173409d0b8867a4b5ee503e7d1e0574ab405a92523dc5260bf2ce39c3ebd380e0407613c64ad60666e20580a098ae9231eeb3f8d36f08b_1"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "ebd034b3-9245-3d19-874c-a84f91ca9c4c",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Detected a template variable used in an anchor tag with\nthe 'href' attribute. This allows a malicious actor to\ninput the 'javascript:' URI and is subject to cross-\nsite scripting (XSS) attacks. Use the 'url' template tag\nto safely generate a URL. You may also consider setting\nthe Content Security Policy (CSP) header.\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/http/templates/json-index.html",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 1,
+                  "endLine": 7,
+                  "endColumn": 45,
+                  "snippet": {
+                    "text": "      <li><a href=\"{{url}}\">{{url}}</a></li>"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "30ae1a5f089ec779efd04e733eb207e2266d95adbd58189d76ca88c6aaaa0b588309e96b91c5da0ee017a8740d39e95ee7eb9979aa6c66f8a7b106f2d8ba09f4_0"
           },
           "properties": {}
         },
@@ -6535,37 +6559,6 @@
           "properties": {}
         },
         {
-          "ruleId": "544461a5-5260-33fc-8b3c-ce5490bab963",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/protocol/pickle.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 96,
-                  "startColumn": 20,
-                  "endLine": 96,
-                  "endColumn": 35,
-                  "snippet": {
-                    "text": "            return pickle.loads(x)"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "95a08d2f6ab85e8ca43e9645cb9504d9a707605f33e2409d352490b812e8e02f8c5785936a0f4c980978a585cbfb29caedfdde69a2a27e2f76b97676289e8a33_1"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "a4c96d07-164b-358a-b009-10bfb6a97a11",
           "kind": "fail",
           "level": "warning",
@@ -6593,6 +6586,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "95a08d2f6ab85e8ca43e9645cb9504d9a707605f33e2409d352490b812e8e02f8c5785936a0f4c980978a585cbfb29caedfdde69a2a27e2f76b97676289e8a33_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "544461a5-5260-33fc-8b3c-ce5490bab963",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/protocol/pickle.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 20,
+                  "endLine": 96,
+                  "endColumn": 35,
+                  "snippet": {
+                    "text": "            return pickle.loads(x)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "95a08d2f6ab85e8ca43e9645cb9504d9a707605f33e2409d352490b812e8e02f8c5785936a0f4c980978a585cbfb29caedfdde69a2a27e2f76b97676289e8a33_1"
           },
           "properties": {}
         },
@@ -6659,37 +6683,6 @@
           "properties": {}
         },
         {
-          "ruleId": "ddbf2ff9-52e8-306d-b638-7b96612d5f58",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/protocol/serialize.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 110,
-                  "startColumn": 12,
-                  "endLine": 110,
-                  "endColumn": 46,
-                  "snippet": {
-                    "text": "    return pickle.loads(pik, buffers=buffers)"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "3c93067addad02929627cca1be9629f58ef9aa97f2af8caad5d43c6279bfc7aead883b3b36236550c23695d5f9445dd5f2df2af05b4242b6137121927485769d_1"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "bea5fa53-24b2-334f-8693-85dcb50b761d",
           "kind": "fail",
           "level": "warning",
@@ -6717,6 +6710,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "74e7d680051aed344aa80375d112a65a16f421d241ddf83e0e8f5b3a587264761dad3afeb0cb4e1eb9873e28534637f3283773f7c0c26e73f6705a917ec3b7e1_1"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "ddbf2ff9-52e8-306d-b638-7b96612d5f58",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/protocol/serialize.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 110,
+                  "startColumn": 12,
+                  "endLine": 110,
+                  "endColumn": 46,
+                  "snippet": {
+                    "text": "    return pickle.loads(pik, buffers=buffers)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "3c93067addad02929627cca1be9629f58ef9aa97f2af8caad5d43c6279bfc7aead883b3b36236550c23695d5f9445dd5f2df2af05b4242b6137121927485769d_1"
           },
           "properties": {}
         },
@@ -6783,37 +6807,6 @@
           "properties": {}
         },
         {
-          "ruleId": "976daa18-f30f-3763-9120-e163566a859c",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/pytest_resourceleaks.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 322,
-                  "startColumn": 13,
-                  "endLine": 323,
-                  "endColumn": 38,
-                  "snippet": {
-                    "text": "            f\"leaked {(bytes_after - bytes_before) / 2 ** 20:.1f} MiB \"\n            \"of traced Python memory\""
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "825708606bc5c2c753f9c4d6c79c56079453eb4b35a1a2b229039beccf83c12ea6cbef3d96cfa8904a69644e42c1d403d26e374661ddc4ea67f33506546a3615_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "c7305651-91fc-39ef-9775-712aecfb3e49",
           "kind": "fail",
           "level": "warning",
@@ -6841,6 +6834,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "3c93067addad02929627cca1be9629f58ef9aa97f2af8caad5d43c6279bfc7aead883b3b36236550c23695d5f9445dd5f2df2af05b4242b6137121927485769d_2"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "976daa18-f30f-3763-9120-e163566a859c",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Detected strings that are implicitly concatenated inside a list.\nPython will implicitly concatenate strings when not explicitly delimited.\nWas this supposed to be individual elements of the list?\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/pytest_resourceleaks.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 322,
+                  "startColumn": 13,
+                  "endLine": 323,
+                  "endColumn": 38,
+                  "snippet": {
+                    "text": "            f\"leaked {(bytes_after - bytes_before) / 2 ** 20:.1f} MiB \"\n            \"of traced Python memory\""
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "825708606bc5c2c753f9c4d6c79c56079453eb4b35a1a2b229039beccf83c12ea6cbef3d96cfa8904a69644e42c1d403d26e374661ddc4ea67f33506546a3615_0"
           },
           "properties": {}
         },
@@ -6938,6 +6962,37 @@
           "properties": {}
         },
         {
+          "ruleId": "d6ee61e4-7c4e-34f8-815b-db57cbbae493",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/scheduler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2043,
+                  "startColumn": 17,
+                  "endLine": 2043,
+                  "endColumn": 32,
+                  "snippet": {
+                    "text": "                pdb.set_trace()"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "7b9f69ff1affb304cf2bd6f627a3b29c60e3ac261863c444fd7716de2e581e81a7c03b2fa9fe01a4fe9dab204bedf1e568190c96c815e478e083ba7543a1d070_1"
+          },
+          "properties": {}
+        },
+        {
           "ruleId": "0f0ad707-7257-3615-a4ac-40b744aff676",
           "kind": "fail",
           "level": "warning",
@@ -7000,37 +7055,6 @@
           "properties": {}
         },
         {
-          "ruleId": "0ccc0909-f4ad-3ab6-ad7e-8f4477cab0b8",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/scheduler.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5543,
-                  "startColumn": 17,
-                  "endLine": 5543,
-                  "endColumn": 32,
-                  "snippet": {
-                    "text": "                pdb.set_trace()"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "7b9f69ff1affb304cf2bd6f627a3b29c60e3ac261863c444fd7716de2e581e81a7c03b2fa9fe01a4fe9dab204bedf1e568190c96c815e478e083ba7543a1d070_2"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "e4217b59-bc1b-3d99-b9ae-0b0ac0e7b7f3",
           "kind": "fail",
           "level": "warning",
@@ -7058,6 +7082,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "6e73e8e25af37bf14613e0bde52daff47da4131708385db81222aca9f44f3b698fb15c188cd95e329d8b9c4875cd987418b92766fe751fc31986cc0274507b07_1"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "0ccc0909-f4ad-3ab6-ad7e-8f4477cab0b8",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "pdb is an interactive debugging tool and you may have forgotten to remove it before committing your code\n"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/scheduler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5543,
+                  "startColumn": 17,
+                  "endLine": 5543,
+                  "endColumn": 32,
+                  "snippet": {
+                    "text": "                pdb.set_trace()"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "7b9f69ff1affb304cf2bd6f627a3b29c60e3ac261863c444fd7716de2e581e81a7c03b2fa9fe01a4fe9dab204bedf1e568190c96c815e478e083ba7543a1d070_2"
           },
           "properties": {}
         },
@@ -7124,37 +7179,6 @@
           "properties": {}
         },
         {
-          "ruleId": "11e1eff9-e848-37c8-9f4e-a7aed36bc4a2",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/scheduler.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 7569,
-                  "startColumn": 21,
-                  "endLine": 7569,
-                  "endColumn": 40,
-                  "snippet": {
-                    "text": "            setup = pickle.loads(setup)"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "c3981822e2693905a79f3ae30fb2a0d7d54ad441a31829b01ef539d1c89084796d0f046bb9265973c32282ea615858592063ff7f6bb70acfb0a1403aa9fdc66e_2"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "b023257f-a9cd-3398-b8ea-892076bf087e",
           "kind": "fail",
           "level": "warning",
@@ -7182,6 +7206,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "c3981822e2693905a79f3ae30fb2a0d7d54ad441a31829b01ef539d1c89084796d0f046bb9265973c32282ea615858592063ff7f6bb70acfb0a1403aa9fdc66e_1"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "11e1eff9-e848-37c8-9f4e-a7aed36bc4a2",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/scheduler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7569,
+                  "startColumn": 21,
+                  "endLine": 7569,
+                  "endColumn": 40,
+                  "snippet": {
+                    "text": "            setup = pickle.loads(setup)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "c3981822e2693905a79f3ae30fb2a0d7d54ad441a31829b01ef539d1c89084796d0f046bb9265973c32282ea615858592063ff7f6bb70acfb0a1403aa9fdc66e_2"
           },
           "properties": {}
         },
@@ -7248,37 +7303,6 @@
           "properties": {}
         },
         {
-          "ruleId": "2943445f-7f32-37c1-a683-fda7817f6031",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/shuffle/_core.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 219,
-                  "startColumn": 45,
-                  "endLine": 219,
-                  "endColumn": 65,
-                  "snippet": {
-                    "text": "            shards_or_bytes: list | bytes = pickle.dumps(shards)"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "4af80657ddd8d838ca20260df0f03bc0298562f2a3d3ff065cd6c3c96d2ffee7065b7be0c4e1b01c0b3084727a3296012345717d6ae85bec6aa77340c32301fc_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "3b817771-c302-30aa-81cf-f4b4006af566",
           "kind": "fail",
           "level": "warning",
@@ -7306,6 +7330,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "8de5e0d0e0f77a242c3184b9517ad5d3930f736a82ec19d57459cd2a1afefe474a9e33b713eca571c133e060c97245d841e7130767af0dfbadb03f10f5a95227_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "2943445f-7f32-37c1-a683-fda7817f6031",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Avoid using `pickle`, which is known to lead to code execution vulnerabilities. When unpickling, the serialized data could be manipulated to run arbitrary code. Instead, consider serializing the relevant data as JSON or a similar text-based serialization format."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/shuffle/_core.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 219,
+                  "startColumn": 45,
+                  "endLine": 219,
+                  "endColumn": 65,
+                  "snippet": {
+                    "text": "            shards_or_bytes: list | bytes = pickle.dumps(shards)"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "4af80657ddd8d838ca20260df0f03bc0298562f2a3d3ff065cd6c3c96d2ffee7065b7be0c4e1b01c0b3084727a3296012345717d6ae85bec6aa77340c32301fc_0"
           },
           "properties": {}
         },
@@ -7775,37 +7830,6 @@
           "properties": {}
         },
         {
-          "ruleId": "19844304-4890-3b5b-b0b9-815c38277cd9",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "Insecure XML parsing functionality, prefer 'defusedxml'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/utils.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1498,
-                  "startColumn": 12,
-                  "endLine": 1498,
-                  "endColumn": 21,
-                  "snippet": {
-                    "text": "    return xml.etree.ElementTree.fromstring(text) is not None"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "6f6f261ea91a3c2f38507eb67bf143c26dd0ab9ef0d1edc90861279f3f59ac8025981e63d36576ad872bc23fd1b573b1f0c29445f29ee9d12b98d78e17e16e06_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "5265e71e-8ac5-33ca-865c-f9a5488623d6",
           "kind": "fail",
           "level": "warning",
@@ -7833,6 +7857,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "48cda1f2b1d8aeccd360a0636e5e1dbac7281151f1b95668f6b54f84e6c2e11a72eaf0a28adf58ed2e74c61d1b495129f1bfd3802cdf8509d7b1a663ae2cfb2d_1"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "19844304-4890-3b5b-b0b9-815c38277cd9",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "Insecure XML parsing functionality, prefer 'defusedxml'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/utils.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1498,
+                  "startColumn": 12,
+                  "endLine": 1498,
+                  "endColumn": 21,
+                  "snippet": {
+                    "text": "    return xml.etree.ElementTree.fromstring(text) is not None"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "6f6f261ea91a3c2f38507eb67bf143c26dd0ab9ef0d1edc90861279f3f59ac8025981e63d36576ad872bc23fd1b573b1f0c29445f29ee9d12b98d78e17e16e06_0"
           },
           "properties": {}
         },
@@ -7899,37 +7954,6 @@
           "properties": {}
         },
         {
-          "ruleId": "c058a88e-b1fc-38e8-a170-921d3838ec69",
-          "kind": "fail",
-          "level": "warning",
-          "message": {
-            "text": "`return` only makes sense inside a function"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "distributed/utils_test.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 113,
-                  "startColumn": 34,
-                  "endLine": 113,
-                  "endColumn": 38,
-                  "snippet": {
-                    "text": "_offload_executor.submit(lambda: None).result()  # create thread during import"
-                  }
-                }
-              }
-            }
-          ],
-          "fingerprints": {
-            "matchBasedId/v1": "93faf5e46f651bfdf6322b0d0ac20ce89caf5c211e6ce3e4cbf32d3f9f3f06b0ecda8c9ac132063de3a4ae4d2ed109b4ff78d7700eab2983b6c1b11e4d77e0e7_0"
-          },
-          "properties": {}
-        },
-        {
           "ruleId": "5f609fca-c70c-36f1-938e-0fb7897749c1",
           "kind": "fail",
           "level": "warning",
@@ -7957,6 +7981,37 @@
           ],
           "fingerprints": {
             "matchBasedId/v1": "bf85656c4bc837018e8286428fb84489298902f709d10b1e8e7b374eae5f23facfbd17b697edc16a16fdca564e05e0cd7fd5db83dd09d4aa385bba1f24813537_0"
+          },
+          "properties": {}
+        },
+        {
+          "ruleId": "c058a88e-b1fc-38e8-a170-921d3838ec69",
+          "kind": "fail",
+          "level": "warning",
+          "message": {
+            "text": "`return` only makes sense inside a function"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "distributed/utils_test.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 113,
+                  "startColumn": 34,
+                  "endLine": 113,
+                  "endColumn": 38,
+                  "snippet": {
+                    "text": "_offload_executor.submit(lambda: None).result()  # create thread during import"
+                  }
+                }
+              }
+            }
+          ],
+          "fingerprints": {
+            "matchBasedId/v1": "93faf5e46f651bfdf6322b0d0ac20ce89caf5c211e6ce3e4cbf32d3f9f3f06b0ecda8c9ac132063de3a4ae4d2ed109b4ff78d7700eab2983b6c1b11e4d77e0e7_0"
           },
           "properties": {}
         },
